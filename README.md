@@ -36,7 +36,7 @@ Available on Google Play Store
 - No configuration needed
 - Full Android Auto support
 
-[📱 Download from Google Play](#)
+[📱 Download from Google Play temporarily unavailable](#)
 
 ### ⭐ PRO Version
 Available on GitHub Releases
