@@ -44,7 +44,7 @@ Available on GitHub Releases
 - Additional PRO features
 - Support the developer
 
-[📦 Download PRO APK](com.tmfgroup.radioandroid-Signed.apk)
+[📦 Download PRO APK]([com.tmfgroup.radioandroid-Signed.apk](https://github.com/toevi/RadioAndroidPro/releases/download/RadioAndroidPro/com.tmfgroup.radioandroid-Signed.apk))
 
 ## 🔧 Installation
 
