@@ -84,23 +84,7 @@ PRO version uses modern JSON format for easy playlist management:
 ### Example JSON Format
 
 ```json
-{
-  "version": "2.6",
-  "app": "Radio Player PRO",
-  "stations": [
-    {
-      "name": "Rock Belgium",
-      "url": "https://stream.example.com/rock",
-      "genre": "Rock",
-      "country": "Belgium"
-    },
-    {
-      "name": "KNBA",
-      "url": "https://stream.example.com/knba",
-      "genre": "Jazz"
-    }
-  ],
-}
+[{"Nazwa":"RMF","Sciezka":"http://rs201-krk.rmfstream.pl/rmf_fm"},{"Nazwa":"RAM","Sciezka":"http://stream.prw.pl:8000/rammp3"}]
 ```
 
 ### How to Use
