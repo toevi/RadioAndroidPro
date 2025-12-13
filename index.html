@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RadioAndroid PRO - Professional Android Auto Radio App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tagline {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            backdrop-filter: blur(10px);
+        }
+
+        .content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px 0;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .screenshots {
+            margin: 40px 0;
+        }
+
+        .screenshots h3 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .screenshot-item {
+            text-align: center;
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .screenshot-item img:hover {
+            transform: scale(1.05);
+        }
+
+        .screenshot-item p {
+            margin-top: 10px;
+            color: #666;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            transition: transform 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .download-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        .version-card {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px;
+            display: inline-block;
+            min-width: 300px;
+            vertical-align: top;
+        }
+
+        .version-card h3 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .version-card .price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #764ba2;
+        }
+
+        .feature-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+        }
+
+        .comparison-table {
+            width: 100%;
+            margin: 40px 0;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+        }
+
+        .comparison-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table tr:hover {
+            background: #f5f7fa;
+        }
+
+        .checkmark {
+            color: #48bb78;
+            font-size: 1.5rem;
+        }
+
+        .crossmark {
+            color: #f56565;
+            font-size: 1.5rem;
+        }
+
+        .warning-mark {
+            color: #ed8936;
+            font-size: 1.5rem;
+        }
+
+        .setup-guide {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }
+
+        .setup-guide h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .steps {
+            counter-reset: step;
+            margin: 20px 0;
+        }
+
+        .step {
+            counter-increment: step;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 10px;
+            position: relative;
+            padding-left: 60px;
+        }
+
+        .step::before {
+            content: counter(step);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: white;
+            margin-top: 60px;
+        }
+
+        .social-links {
+            margin: 20px 0;
+        }
+
+        .social-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+            display: inline-block;
+        }
+
+        .social-links a:hover {
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .version-card {
+                display: block;
+                margin: 20px 0;
+            }
+
+            .comparison-table {
+                font-size: 0.9rem;
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .pro-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">📻</div>
+            <h1>RadioAndroid PRO</h1>
+            <p class="tagline">Professional Android Auto Radio App</p>
+            <div>
+                <span class="badge">🚗 Full Android Auto</span>
+                <span class="badge">🎵 Background Play</span>
+                <span class="badge">🌍 Global Streams</span>
+                <span class="badge">🎚️ PRO Equalizer</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="content">
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 40px;">
+                🏆 Best alternative to alternative Radio with native Android Auto integration!
+            </h2>
+
+            <div class="screenshots">
+                <h3>📱 See the app in action</h3>
+                <div class="screenshot-grid">
+                    <div class="screenshot-item">
+                        <img src="screenshot1.jpg" alt="Radio Player - Main Screen">
+                        <p>Main player screen</p>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshot2.jpg" alt="Stations List">
+                        <p>Radio stations list</p>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshot3.jpg" alt="Edit Station">
+                        <p>Station editing</p>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshot4.jpg" alt="Equalizer PRO">
+                        <p>9-band Equalizer PRO</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🚗</div>
+                    <h3>Full Android Auto</h3>
+                    <p>Full integration, not just audio. Control the app safely while driving.</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">🎵</div>
+                    <h3>Background Play</h3>
+                    <p>Music plays in the background even when you use other apps.</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Global Streams</h3>
+                    <p>Thousands of radio stations from around the world. Rock, Jazz, News, Sports and more.</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <h3>Bluetooth Ready</h3>
+                    <p>Works both via Android Auto and classic Bluetooth connection.</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">🎚️</div>
+                    <h3>Equalizer PRO</h3>
+                    <p>9-band professional equalizer (60Hz - 14kHz) in PRO version.</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <h3>JSON Import/Export</h3>
+                    <p>Playlist management via modern JSON format. Easy backups and sharing.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="download-section">
+            <h2 style="margin-bottom: 40px; font-size: 2.5rem;">🔥 Download Now</h2>
+            
+            <div class="version-card">
+                <h3>🆓 FREE</h3>
+                <p>Google Play Store</p>
+                <div class="price">Free</div>
+                <ul class="feature-list">
+                    <li>✅ Full Android Auto integration</li>
+                    <li>✅ Background playback</li>
+                    <li>✅ Bluetooth audio</li>
+                    <li>✅ Custom HTTP/HTTPS stations</li>
+                    <li>✅ Thousands of worldwide stations</li>
+                    <li>✅ Integration with fmstream.org</li>
+                </ul>
+                <a href="#" class="btn">📱 Google Play</a>
+            </div>
+
+            <div class="version-card">
+                <h3>⭐ PRO</h3>
+                <p>GitHub Releases</p>
+                <div class="price">Support</div>
+                <ul class="feature-list">
+                    <li>✅ <strong>Everything from FREE +</strong></li>
+                    <li>🎚️ <strong>9-band Equalizer</strong></li>
+                    <li>💾 <strong>JSON Import/Export</strong></li>
+                    <li>📂 <strong>Playlist Management</strong></li>
+                    <li>🎨 <strong>Enhanced PRO UI</strong></li>
+                    <li>☕ <strong>Support the developer</strong></li>
+                </ul>
+                <a href="com.tmfgroup.radioandroid-Signed.apk" class="btn btn-secondary">📦 Download PRO</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2 style="text-align: center; color: #667eea; margin-bottom: 30px;">
+                🆚 Comparison with alternative Radio
+            </h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>alternative Radio</th>
+                        <th>Radio Player FREE</th>
+                        <th>Radio Player PRO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Android Auto Integration</strong></td>
+                        <td><span class="warning-mark">⚠️</span> Basic</td>
+                        <td><span class="checkmark">✅</span> Full</td>
+                        <td><span class="checkmark">✅</span> Full</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Background Playback</strong></td>
+                        <td><span class="checkmark">✅</span></td>
+                        <td><span class="checkmark">✅</span></td>
+                        <td><span class="checkmark">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Equalizer</strong></td>
+                        <td><span class="crossmark">❌</span></td>
+                        <td><span class="crossmark">❌</span></td>
+                        <td><span class="checkmark">✅</span> 9-band professional</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Playlist Export</strong></td>
+                        <td><span class="warning-mark">⚠️</span> PLS (legacy)</td>
+                        <td><span class="crossmark">❌</span></td>
+                        <td><span class="checkmark">✅</span> JSON (modern)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Manual Editing</strong></td>
+                        <td><span class="crossmark">❌</span> Difficult</td>
+                        <td><span class="warning-mark">⚠️</span> Basic</td>
+                        <td><span class="checkmark">✅</span> Easy (JSON)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>UI/UX</strong></td>
+                        <td>😕 Complicated</td>
+                        <td>😊 Simple</td>
+                        <td>😎 Simple + Enhanced</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bluetooth Support</strong></td>
+                        <td><span class="checkmark">✅</span></td>
+                        <td><span class="checkmark">✅</span></td>
+                        <td><span class="checkmark">✅</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="content">
+            <div class="setup-guide">
+                <h3>⚙️ Android Auto Setup (PRO version from GitHub)</h3>
+                <p>PRO version requires enabling developer mode in Android Auto:</p>
+                
+                <div class="steps">
+                    <div class="step">
+                        Open the <strong>Android Auto</strong> app on your phone
+                    </div>
+                    <div class="step">
+                        Go to <strong>Settings ⚙️</strong> → scroll to <strong>"Version"</strong>
+                    </div>
+                    <div class="step">
+                        <strong>Tap 10 times</strong> on the version number Android and AndroidAuto
+                    </div>
+                    <div class="step">
+                        A message <em>"You are a developer"</em> will appear ✅
+                    </div>
+                    <div class="step">
+                        Tap <strong>⋮</strong> (menu) → <strong>Developer settings</strong>
+                    </div>
+					<div class="step">
+                        Tap <strong>⋮</strong> (menu) → <strong>developer mode</strong>
+                    </div>
+                    <div class="step">
+                        Enable <strong>"Unknown sources"</strong> 🔓
+                    </div>
+                    <div class="step">
+                        Connect your phone to the car 🚗 - done!
+                    </div>
+                </div>
+
+                <p style="margin-top: 20px;">
+                    💡 <strong>FREE version from Google Play doesn't require these steps</strong> - you install and it works right away!
+                </p>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2 style="color: #667eea; margin-bottom: 30px;">💾 Playlist Management <span class="pro-badge">PRO</span></h2>
+            
+            <h3 style="margin-top: 30px;">JSON Format - modern and easy</h3>
+            <p>PRO version uses JSON format for playlist management. This means:</p>
+            
+            <div class="features" style="margin: 30px 0;">
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <h3>Easy Backup</h3>
+                    <p>Save entire configuration (stations + equalizer) to a single file</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">✏️</div>
+                    <h3>App and Manual Edit</h3>
+                    <p>Edit playlist in notepad - JSON is human-readable</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🤝</div>
+                    <h3>Easy Sharing</h3>
+                    <p>Share your favorite stations with friends with one file</p>
+                </div>
+            </div>
+
+            <h3>JSON file example:</h3>
+            <div class="code-block">
+ [{"Nazwa":"RMF","Sciezka":"http://rs201-krk.rmfstream.pl/rmf_fm"},{"Nazwa":"RAM","Sciezka":"http://stream.prw.pl:8000/rammp3"}]
+
+            </div>
+
+            <p style="margin-top: 20px;">
+                <strong>Users can:</strong> copy the template, add their stations, 
+                change EQ settings and import the ready file to the app!
+            </p>
+        </div>
+
+        <div class="content" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+            <h2 style="text-align: center; margin-bottom: 30px; color: white;">
+                👍 Project Support
+            </h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px;">
+                If <span class="highlight">RadioAndroid PRO</span> helps you in your daily travels, 
+                consider supporting the developer!
+            </p>
+            <div style="text-align: center;">
+                <a href="https://buycoffee.to/toevi" class="btn" style="background: white; color: #f5576c;">
+                    ☕ Buy me a coffee
+                </a>
+            </div>
+            <p style="text-align: center; margin-top: 20px; opacity: 0.9;">
+                Your support motivates further development! 🚀
+            </p>
+        </div>
+
+        <div class="content">
+            <h2 style="color: #667eea; margin-bottom: 30px;">🔗 Useful Links</h2>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 15px; border-bottom: 1px solid #eee;">
+                    📻 <a href="https://fmstream.org" style="color: #667eea; text-decoration: none; font-weight: bold;">Radio Stream Browser - fmstream.org</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <h3>RadioAndroid PRO</h3>
+            <p>Professional Android Auto Radio Application</p>
+            <div class="social-links">
+                <a href="#" title="GitHub">⭐</a>
+                <a href="mailto:tomek.maselko@gmail.com" title="Email">✉️</a>
+                <a href="https://buycoffee.to/toevi" title="Buy Coffee">☕</a>
+            </div>
+            <p style="margin-top: 20px; opacity: 0.8;">
+                © 2025 Tomek Maslowski | MIT License
+            </p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                Made with ❤️ for Android Auto enthusiasts
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
