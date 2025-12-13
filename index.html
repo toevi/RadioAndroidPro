@@ -81,6 +81,37 @@
             margin-bottom: 30px;
         }
 
+        .video-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+        }
+
+        .video-caption {
+            margin-top: 20px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
         .screenshot-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -393,6 +424,20 @@
 
             <div class="screenshots">
                 <h3>📱 See the app in action</h3>
+                
+                <!-- YouTube Video -->
+                <div class="video-container">
+                    <a href="https://youtube.com/shorts/O_F97QZRe64" target="_blank" style="text-decoration: none;">
+                        <div style="position: relative; max-width: 800px; margin: 0 auto; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.3s ease;">
+                            <img src="https://img.youtube.com/vi/nbKD035hWJQ/maxresdefault.jpg" alt="RadioAndroid PRO Demo" style="width: 100%; display: block;">
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background: rgba(255,0,0,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 0; height: 0; border-top: 15px solid transparent; border-bottom: 15px solid transparent; border-left: 25px solid white; margin-left: 5px;"></div>
+                            </div>
+                        </div>
+                    </a>
+                    <p class="video-caption">🎥 Watch full demo on YouTube - Click to play</p>
+                </div>
+
                 <div class="screenshot-grid">
                     <div class="screenshot-item">
                         <img src="screenshot1.jpg" alt="Radio Player - Main Screen">
@@ -669,7 +714,3 @@
 </body>
 
 </html>
-
-
-
-
