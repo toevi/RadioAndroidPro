@@ -36,7 +36,7 @@ Available on Google Play Store
 - No configuration needed
 - Full Android Auto support
 
-[📱 Download from Google Play temporarily unavailable](#)
+[📱 Download from Google Play lite version open test]([#](https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid)
 
 ### ⭐ PRO Version
 Available on GitHub Releases
