@@ -140,7 +140,7 @@ MIT License
 Copyright (c) 2025 Tomek Maslowski
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software,
- to deal in the Software without restriction for use only.
+ to deal in the Software without restriction restriction for personal use only.
 The Software may not be sold, copied, or otherwise altered.
  The Software is furnished for such use subject to the following conditions:
 
