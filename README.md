@@ -130,29 +130,39 @@ Your support motivates further development! 🚀
 
 ## 📝 License
 
-```
-MIT License
+# Custom Software License
 
-Copyright (c) 2025 Tomek Maslowski
+**Copyright © 2025 Tomek Maslowski**  
+**All Rights Reserved**
 
-MIT License
+## Terms and Conditions
 
-Copyright (c) 2025 Tomek Maslowski
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+to use the Software for **personal, non-commercial purposes only**, subject to the following conditions:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software,
- to deal in the Software without restriction restriction for personal use only.
-The Software may not be sold, copied, or otherwise altered.
- The Software is furnished for such use subject to the following conditions:
+### Permitted Uses:
+- ✅ Personal installation and use
+- ✅ Testing and evaluation
+- ✅ Viewing source code for educational purposes
 
-The above copyright notice and this permission notice shall be included in all
- copies or substantial portions of the Software.
+### Prohibited Actions:
+- ❌ **Commercial use** - The Software may not be sold, rented, leased, or used for profit
+- ❌ **Redistribution** - The Software may not be copied, distributed, or shared with others
+- ❌ **Modification** - The Software may not be altered, modified, or merged with other software
+- ❌ **Reverse Engineering** - Decompilation, disassembly, or reverse engineering of the Software is strictly prohibited
+- ❌ **Derivative Works** - Creating derivative works based on this Software is not permitted
 
-THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING,
-BUT NOT LIMITED TO, THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
- AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
+### Required Attribution:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+### Disclaimer:
+THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, 
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+**For commercial licensing inquiries, please contact: [twój email]**
 
 ## 🤝 Contributing
 
