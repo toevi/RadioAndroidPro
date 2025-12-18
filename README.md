@@ -135,7 +135,8 @@ Your support motivates further development! 🚀
 **Copyright © 2025 Tomek Maslowski**  
 **All Rights Reserved**
 
-## Terms and Conditions
+## Terms and Conditions 
+This license applies to the compiled Android application (APK file) only
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 to use the Software for **personal, non-commercial purposes only**, subject to the following conditions:
