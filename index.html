@@ -11,24 +11,34 @@
             box-sizing: border-box;
         }
 
+        html {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
             color: #333;
             background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            background-attachment: fixed;
             min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            width: 100%;
         }
 
         header {
             text-align: center;
             padding: 60px 20px;
             color: white;
+            width: 100%;
         }
 
         .logo {
@@ -69,6 +79,7 @@
             padding: 40px;
             margin: 20px 0;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
         }
 
         .screenshots {
@@ -173,10 +184,11 @@
         .download-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 50px;
+            padding: 50px 20px;
             border-radius: 20px;
             margin: 40px 0;
             text-align: center;
+            width: 100%;
         }
 
         .version-card {
@@ -184,9 +196,10 @@
             color: #333;
             padding: 30px;
             border-radius: 15px;
-            margin: 20px;
+            margin: 20px auto;
             display: inline-block;
             min-width: 300px;
+            max-width: 100%;
             vertical-align: top;
         }
 
@@ -206,6 +219,8 @@
         .feature-list {
             text-align: left;
             margin: 20px 0;
+            list-style: none;
+            padding: 0;
         }
 
         .feature-list li {
@@ -330,6 +345,7 @@
             padding: 40px 20px;
             color: white;
             margin-top: 60px;
+            width: 100%;
         }
 
         .social-links {
@@ -350,6 +366,18 @@
         }
 
         @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            header {
+                padding: 40px 10px;
+            }
+
+            .logo {
+                font-size: 3rem;
+            }
+
             h1 {
                 font-size: 2rem;
             }
@@ -358,16 +386,82 @@
                 font-size: 1rem;
             }
 
+            .badge {
+                font-size: 0.85rem;
+                padding: 6px 12px;
+            }
+
             .content {
-                padding: 20px;
+                padding: 20px 15px;
+                margin: 10px 0;
+                border-radius: 15px;
+            }
+
+            .download-section {
+                padding: 30px 15px;
+                margin: 20px 0;
             }
 
             .version-card {
                 display: block;
-                margin: 20px 0;
+                margin: 20px auto;
+                min-width: auto;
+                width: 100%;
+            }
+
+            .version-card h3 {
+                font-size: 1.5rem;
+            }
+
+            .version-card .price {
+                font-size: 2rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .feature {
+                padding: 20px;
             }
 
             .comparison-table {
+                font-size: 0.85rem;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+
+            .content {
+                padding: 15px 10px;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step {
+                padding-left: 50px;
+                font-size: 0.9rem;
+            }
+
+            .step::before {
+                width: 30px;
+                height: 30px;
                 font-size: 0.9rem;
             }
         }
@@ -387,6 +481,7 @@
             overflow-x: auto;
             margin: 20px 0;
             font-family: 'Courier New', monospace;
+            word-break: break-all;
         }
 
         .pro-badge {
@@ -433,6 +528,20 @@
         .license-box li:before {
             position: absolute;
             left: 0;
+        }
+
+        @media (max-width: 768px) {
+            .license-box {
+                padding: 20px 15px;
+            }
+
+            .license-box h3 {
+                font-size: 1.2rem;
+            }
+
+            .license-box li {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -539,14 +648,14 @@
                 <h3>🆓 FREE</h3>
                 <p>Google Play Store</p>
                 <div class="price">Free</div>
-                <div class="feature-list">
+                <ul class="feature-list">
                     <li>✅ Full Android Auto integration</li>
                     <li>✅ Background playback</li>
                     <li>✅ Bluetooth audio</li>
                     <li>✅ Custom HTTP/HTTPS stations</li>
                     <li>✅ Thousands of worldwide stations</li>
                     <li>✅ Integration with fmstream.org</li>
-                </div>
+                </ul>
                 <a href="https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid" class="btn">📱 Google Play</a>
             </div>
 
@@ -554,14 +663,14 @@
                 <h3>⭐ PRO</h3>
                 <p>GitHub Releases</p>
                 <div class="price">Support</div>
-                <div class="feature-list">
+                <ul class="feature-list">
                     <li>✅ <strong>Everything from FREE +</strong></li>
                     <li>🎚️ <strong>9-band Equalizer</strong></li>
                     <li>💾 <strong>JSON Import/Export</strong></li>
                     <li>📂 <strong>Playlist Management</strong></li>
                     <li>🎨 <strong>Enhanced PRO UI</strong></li>
                     <li>☕ <strong>Support the developer</strong></li>
-                </div>
+                </ul>
                 <a href="https://github.com/toevi/RadioAndroidPro/releases/download/RadioAndroidPro/com.tmfgroup.radioandroid-Signed.apk" class="btn btn-secondary">📦 Download PRO</a>
             </div>
         </div>
@@ -630,8 +739,7 @@
 
             <h3>JSON file example:</h3>
             <div class="code-block">
- [{"Nazwa":"RMF","Sciezka":"http://rs201-krk.rmfstream.pl/rmf_fm"},{"Nazwa":"RAM","Sciezka":"http://stream.prw.pl:8000/rammp3"}]
-
+[{"Nazwa":"RMF","Sciezka":"http://rs201-krk.rmfstream.pl/rmf_fm"},{"Nazwa":"RAM","Sciezka":"http://stream.prw.pl:8000/rammp3"}]
             </div>
 
             <p style="margin-top: 20px;">
@@ -676,10 +784,11 @@
                     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
                     TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 </p>
-
+                
                 <p style="margin-top: 20px; padding: 15px; background: #e6f7ff; border-left: 4px solid #667eea; border-radius: 5px;">
-                    📧 <strong>For commercial licensing inquiries, please contact:</strong> tomek.maselko@gmail.com
+                    📧 <strong>For commercial licensing inquiries, please contact:</strong><a href="mailto:tomek.maselko@gmail.com" title="Email"> tomek.maselko@gmail.com </a>
                 </p>
+				
             </div>
         </div>
 
@@ -729,8 +838,4 @@
         </div>
     </footer>
 </body>
-
 </html>
-
-
-
