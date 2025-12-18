@@ -399,6 +399,41 @@
             display: inline-block;
             margin-left: 10px;
         }
+
+        .license-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .license-box h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .license-box h4 {
+            color: #764ba2;
+            margin: 20px 0 10px 0;
+        }
+
+        .license-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .license-box li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .license-box li:before {
+            position: absolute;
+            left: 0;
+        }
     </style>
 </head>
 <body>
@@ -605,9 +640,53 @@
             </p>
         </div>
 
+        <div class="content">
+            <h2 style="color: #667eea; margin-bottom: 30px;">⚖️ License Information</h2>
+            
+            <div class="license-box">
+                <h3>📄 Custom Software License (APK Only)</h3>
+                <p><strong>Copyright © 2025 Tomek Maslowski - All Rights Reserved</strong></p>
+                <p style="margin: 15px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+                    ⚠️ <strong>Important:</strong> This license applies to the <strong>compiled Android application (APK file)</strong> only. 
+                    It does NOT apply to HTML files, README, or other documentation in this repository.
+                </p>
+
+                <h4>✅ Permitted Uses:</h4>
+                <ul>
+                    <li style="color: #48bb78;">✅ Personal installation and use</li>
+                    <li style="color: #48bb78;">✅ Testing and evaluation</li>
+                    <li style="color: #48bb78;">✅ Viewing source code for educational purposes</li>
+                </ul>
+
+                <h4>❌ Prohibited Actions:</h4>
+                <ul>
+                    <li style="color: #f56565;">❌ <strong>Commercial use</strong> - The Software may not be sold, rented, leased, or used for profit</li>
+                    <li style="color: #f56565;">❌ <strong>Redistribution</strong> - The Software may not be copied, distributed, or shared with others</li>
+                    <li style="color: #f56565;">❌ <strong>Modification</strong> - The Software may not be altered, modified, or merged with other software</li>
+                    <li style="color: #f56565;">❌ <strong>Reverse Engineering</strong> - Decompilation, disassembly, or reverse engineering of the Software is strictly prohibited</li>
+                    <li style="color: #f56565;">❌ <strong>Derivative Works</strong> - Creating derivative works based on this Software is not permitted</li>
+                </ul>
+
+                <h4>📋 Required Attribution:</h4>
+                <p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+
+                <h4>⚠️ Disclaimer:</h4>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 15px;">
+                    THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO 
+                    THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE 
+                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
+                    TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                </p>
+
+                <p style="margin-top: 20px; padding: 15px; background: #e6f7ff; border-left: 4px solid #667eea; border-radius: 5px;">
+                    📧 <strong>For commercial licensing inquiries, please contact:</strong> tomek.maselko@gmail.com
+                </p>
+            </div>
+        </div>
+
         <div class="content" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
             <h2 style="text-align: center; margin-bottom: 30px; color: white;">
-                👍 Project Support
+                💜 Project Support
             </h2>
             <p style="text-align: center; font-size: 1.2rem; margin-bottom: 30px;">
                 If <span class="highlight">RadioAndroid PRO</span> helps you in your daily travels, 
@@ -643,7 +722,7 @@
                 <a href="https://buycoffee.to/toevi" title="Buy Coffee">☕</a>
             </div>
             <p style="margin-top: 20px; opacity: 0.8;">
-                © 2025 Tomek Maslowski | MIT License
+                © 2025 Tomek Maslowski | Custom License (APK Only)
             </p>
             <p style="margin-top: 10px; font-size: 0.9rem;">
                 Made with ❤️ for Android Auto enthusiasts
@@ -653,6 +732,3 @@
 </body>
 
 </html>
-
-
-
