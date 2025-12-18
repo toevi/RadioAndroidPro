@@ -1,4 +1,4 @@
-# 📻 RadioAndroidPRO
+# 📻 RadioAndroidPRO v2.6
 
 **Professional Android Auto Radio Application**
 
