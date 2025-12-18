@@ -162,7 +162,7 @@ OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISIN
 
 ---
 
-**For commercial licensing inquiries, please contact: [twój email]**
+**For commercial licensing inquiries, please contact: [tomek.maselko@gmail.com]**
 
 ## 🤝 Contributing
 
