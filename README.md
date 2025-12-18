@@ -144,13 +144,13 @@ to use the Software for **personal, non-commercial purposes only**, subject to t
 ### Permitted Uses:
 - ✅ Personal installation and use
 - ✅ Testing and evaluation
-- ✅ Viewing source code for educational purposes
+
 
 ### Prohibited Actions:
 - ❌ **Commercial use** - The Software may not be sold, rented, leased, or used for profit
 - ❌ **Redistribution** - The software may not be copied, distributed or made available to third parties outside of the official website
 - ❌ **Modification** - The Software may not be altered, modified, or merged with other software
-- ❌ **Reverse Engineering** - Decompilation, disassembly, or reverse engineering of the Software is strictly prohibited
+- ❌ **Reverse Engineering** - Decompilation, disassembly, or reverse engineering of the APK is prohibited except where expressly permitted by applicable law.
 - ❌ **Derivative Works** - Creating derivative works based on this Software is not permitted
 
 ### Required Attribution:
