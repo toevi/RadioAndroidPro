@@ -77,7 +77,7 @@ PRO version requires enabling Android Auto developer mode:
 PRO version uses modern JSON format for easy playlist management:
 
 ### Features
-- **💾 Easy Backup** - Save entire configuration to one file
+- **💾 Easy Backup** - Save an load entire stations list to one file
 - **✏️ Manual Editing** - Edit playlists in any text editor
 - **🤝 Easy Sharing** - Share stations with friends
 
