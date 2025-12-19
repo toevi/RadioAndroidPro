@@ -68,9 +68,9 @@ PRO version requires enabling Android Auto developer mode:
 
 ## 📱 Screenshots
 
-| Main Player | Stations List | Edit Station | Equalizer PRO |
-|-------------|---------------|--------------|---------------|
-| ![Main](screenshot1.jpg) | ![List](screenshot2.jpg) | ![Edit](screenshot3.jpg) | ![EQ](screenshot4.jpg) |
+| Main Player | Stations List | Edit Station | Equalizer PRO | Android Auto | Car Bluetooth | Android Auto | Background Play | 
+|-------------|---------------|--------------|---------------|--------------|---------------|--------------|-----------------|
+| ![Main](screenshot1.jpg) | ![List](screenshot2.jpg) | ![Edit](screenshot3.jpg) | ![EQ](screenshot4.jpg) | ![Android Auto ](screenshot5.jpg) | ![Car Bluetooth](screenshot7.jpg) | ![Android Auto ](screenshot6.jpg) | ![Background Play](screenshot8.jpg) |
 
 ## 💾 JSON Playlist Management (PRO)
 
