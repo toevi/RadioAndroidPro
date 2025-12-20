@@ -115,7 +115,7 @@ PRO version uses modern JSON format for easy playlist management:
 - **Equalizer:** 9-band (60Hz, 140Hz, 230Hz, 400Hz, 910Hz, 1kHz, 3.6kHz, 8kHz, 14kHz)
 
 ## 🔗 Useful Links
-
+- **📻 Privacy Policy page:** (https://toevi.github.io/Android-Radio-privacy-policy/)
 - **📻 Radio Stream Browser:** [fmstream.org](https://fmstream.org)
 - **☕ Support Developer:** [Buy me a coffee](https://buycoffee.to/toevi)
 - **✉️ Contact:** tomek.maselko@gmail.com
