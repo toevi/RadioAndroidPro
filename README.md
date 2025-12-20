@@ -108,8 +108,8 @@ PRO version uses modern JSON format for easy playlist management:
 ## 🛠️ Technical Details
 
 - **Platform:** Android
-- **Min SDK:** TBD
-- **Target SDK:** TBD
+- **Min SDK:** 14
+- **Target SDK:** 16
 - **Android Auto:** Full native integration
 - **Audio Formats:** HTTP/HTTPS streaming
 - **Equalizer:** 9-band (60Hz, 140Hz, 230Hz, 400Hz, 910Hz, 1kHz, 3.6kHz, 8kHz, 14kHz)
