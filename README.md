@@ -1,6 +1,6 @@
 # 📻 RadioAndroidPRO v2.6
 
-**Professional Android Auto Radio Application**
+**Simply Internet Radio Application**
 
 [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://www.android.com/)
 [![Android Auto](https://img.shields.io/badge/Android%20Auto-Full%20Support-blue.svg)](https://www.android.com/auto/)
