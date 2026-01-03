@@ -2,11 +2,11 @@
 
 ## 🎉 Important Announcement
 
-**The PRO version has been withdrawn from GitHub and is no longer available for download as APK.**
+**PRO version with Android Auto integration is available in APK file, instructions and download on the GitHub project page [https://toevi.github.io/RadioAndroidPro/downloads](https://toevi.github.io/RadioAndroidPro/) in APK format.**
 
-The PRO version has been released in the official Google Play Store as the regular version of RadioAndroid. Link on the home page.
+The Free version has been released in the official Google Play Store as the regular version of RadioAndroid. Link on the home page.
 
-All previously downloaded APK files will continue to work normally.
+
 
 ---
 
