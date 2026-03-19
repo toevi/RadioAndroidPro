@@ -849,7 +849,7 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 
 ## 👤 Author
 
-**Tomek Maslowski / tmfgroup**
+**Tomek Maslowski / tmfgroup / Poland**
 2025–2026
 
 Support the author: [buycoffee.to/toevi](https://buycoffee.to/toevi)
