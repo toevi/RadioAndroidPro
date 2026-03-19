@@ -121,9 +121,7 @@ If everything fails, playback stops cleanly with a status message. Press Play to
 
 When you press Stop or Pause, the app **stays stopped**. Network changes (switching Wi-Fi, entering home) will not trigger unwanted auto-play. The reconnect system is only active while the app is actually trying to play.
 
-> **Known limitation:** In certain edge cases — network handoff between Wi-Fi and mobile data, Bluetooth or Android Auto disconnection mid-stream — the reconnect loop may continue without a stop flag being set. In these cases, pressing Stop manually terminates playback. These cases are identified and will be addressed in a future update.
-
-> *This is a project, not a finished product. Bugs are fixed continuously as they surface — driven by a growing number of users, devices, and platforms. Every new device, every new Android version, every new head unit is a potential new edge case. That is the nature of a universal client running on hardware it has never seen before.*
+> *This is a project, not a finished product.
 
 ---
 
@@ -438,11 +436,54 @@ The app passes AA certification on paper but behaves unexpectedly on head units:
 
 Android Auto requires a working `MediaBrowserServiceCompat` implementation. The Xamarin/MAUI C# bindings for `androidx.media` are incomplete and poorly documented. Problems compound: several behaviors that work correctly in the Java/Kotlin world simply do not have complete C# examples anywhere.
 
-#### Issue A: Station list and pagination awareness
+#### Issue A: Station list cut off at 10 items — the pagination trap
 
-AA head units may call `OnLoadChildren()` multiple times with pagination parameters. If you have more than ~10 stations, some head units will only display the first page. The current implementation returns all stations in a single `SendResult()` call, which works on tested head units but may require pagination support for very large station lists.
+AA head units may call `OnLoadChildren()` multiple times with pagination parameters (`EXTRA_PAGE`, `EXTRA_PAGE_SIZE` in the `Bundle options`). If you have more than ~10 stations, some head units will only display the first page — the rest silently disappear.
 
-> **Note:** Pagination behavior is head-unit-dependent. Some head units load all items in one call regardless. If your station list is large, consider implementing pagination via `Bundle` extras in `OnLoadChildren()`. Always test on a real device or the official Android Auto Desktop Head Unit (DHU) emulator.
+Many developers try to solve this by overriding the paginated overload `OnLoadChildren(string parentId, Result result, Bundle options)` and manually slicing the list. **This is usually unnecessary and error-prone.**
+
+**The working solution:** Override the simple `OnLoadChildren(string parentId, Result result)` overload (without `Bundle options`) and return **all** items in a single `SendResult()` call. The `MediaBrowserServiceCompat` framework handles pagination transparently on the client side — the head unit receives all items and pages through them internally.
+
+This is the actual implementation from RadioAndroid PRO, tested and working on Android Auto DHU, real car head units, and Google Play AA review:
+
+```csharp
+public override void OnLoadChildren(string parentId, Result result)
+{
+    var mediaItems = new List<MediaBrowserCompat.MediaItem>();
+    if (parentId == "__ROOT__")
+    {
+        List<RadioAndroid.Models.Stacja> stacjeList;
+        lock (_queueGate)
+        {
+            _stations = LoadStationsFromFile();
+            stacjeList = _stations;
+            try { _mediaSession.SetQueue(BuildQueueItems(_stations)); } catch { }
+        }
+
+        // Return ALL stations — do not slice or paginate manually.
+        // MediaBrowserServiceCompat handles pagination internally.
+        for (int i = 0; i < stacjeList.Count; i++)
+        {
+            var stacja = stacjeList[i];
+            mediaItems.Add(CreateStation(ToMediaId(i), stacja.Nazwa, stacja.Sciezka));
+        }
+    }
+    var javaList = new ArrayList();
+    foreach (var item in mediaItems)
+        javaList.Add(item);
+    result.SendResult(javaList);
+}
+```
+
+**Why this works:**
+- The `MediaBrowserServiceCompat` base class has two overloads of `OnLoadChildren`. The paginated one (`with Bundle options`) is called first by the framework. If you do not override it, the base implementation falls back to the simple overload and handles page slicing automatically.
+- By returning the full list in the simple overload, you let the framework decide how to page — which it does correctly.
+- Manually implementing pagination (checking `EXTRA_PAGE` / `EXTRA_PAGE_SIZE` and slicing the list yourself) is only needed if your station list is extremely large (hundreds of items) and you want to defer loading.
+
+**Key points:**
+- Do **not** override the `OnLoadChildren(string, Result, Bundle)` overload unless you have a specific reason — overriding it incorrectly is the most common cause of the 10-item cutoff.
+- Always rebuild the `SetQueue()` inside `OnLoadChildren` so the media session queue stays in sync with the browse tree.
+- Test on the official Android Auto Desktop Head Unit (DHU) emulator — real car head units may behave differently from the phone screen projection.
 
 #### Issue B: Circular navigation on Next/Previous
 
