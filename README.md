@@ -121,7 +121,7 @@ If everything fails, playback stops cleanly with a status message. Press Play to
 
 When you press Stop or Pause, the app **stays stopped**. Network changes (switching Wi-Fi, entering home) will not trigger unwanted auto-play. The reconnect system is only active while the app is actually trying to play.
 
-> *This is a project, not a finished product.
+> *
 
 ---
 
