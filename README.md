@@ -867,4 +867,4 @@ Users are responsible for ensuring they have proper access rights to all streams
 
 ---
 
-*PS. A small project that started as a free, ad-free personal car radio — for my own use — grew into an app on Google Play for everyone. A few people from YouTube and my family inspired me and helped me through the hardest moment: getting through Google Play's review and testing process. Thank you all.*
+*PS. A small project that started as a free, ad-free personal car radio — for my own use — grew into an app on Google Play for everyone. A few people from YouTube and my family inspired me and helped me through the hardest moment: getting through Google Play's review and testing process. Thank you all. Special thanks to tester Ian Davidson from Wagga Wagga, a city in New South Wales, Australia, thanks Ian*
