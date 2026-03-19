@@ -52,7 +52,7 @@ That is the real technical challenge — and the reason stream stability require
 | Platform | Notes |
 |---|---|
 | 📱 Android phones & tablets | Android 8–16 (API 26–35) |
-| 📺 Android TV / TV boxes | Full support — tested on TV boxes used as dedicated in-car players |
+| 📺 Android TV / TV boxes |Full support - tested on Android TV set-top boxes via LAN WiFi and Chromecast home network|
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
 | 🚙 Android Automotive OS | Cars with built-in Android system (no phone required) |
