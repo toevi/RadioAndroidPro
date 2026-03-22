@@ -54,10 +54,10 @@ That is the real technical challenge — and the reason stream stability require
 | Platform | Notes |
 |---|---|
 | 📱 Android phones & tablets | Android 8–16 (API 26–35) |
-| 📺 Android TV / TV boxes | Full support — tested on TV boxes used as dedicated in-car players |
+| 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
-| 🚙 Android Automotive OS | Cars with built-in Android system (no phone required) |
+| 🚙 Android Automotive OS | An attempt to port it to AAOS is in the testing phase of Google Console, described below |
 | 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. Wear OS watches not supported. |
 
 ---
@@ -123,7 +123,7 @@ If everything fails, playback stops cleanly with a status message. Press Play to
 
 When you press Stop or Pause, the app **stays stopped**. Network changes (switching Wi-Fi, entering home) will not trigger unwanted auto-play. The reconnect system is only active while the app is actually trying to play.
 
-> **Known limitation:** In certain edge cases — network handoff between Wi-Fi and mobile data, Bluetooth or Android Auto disconnection mid-stream — the reconnect loop may continue without a stop flag being set. In these cases, pressing Stop manually terminates playback. These cases are identified and will be addressed in a future update.
+> **Known limitation:** In certain edge cases — network handoff between Wi-Fi and mobile data, Bluetooth or Android Auto disconnection mid-stream — the reconnect loop may continue without a stop flag being set. In these cases, pressing Stop manually terminates playback. These cases were identified through daily use testing and fixed..
 
 > *This is a project, not a finished product. Bugs are fixed continuously as they surface — driven by a growing number of users, devices, and platforms. Every new device, every new Android version, every new head unit is a potential new edge case. That is the nature of a universal client running on hardware it has never seen before.*
 
@@ -1320,4 +1320,4 @@ Users are responsible for ensuring they have proper access rights to all streams
 
 ---
 
-*PS. A small project that started as a free, ad-free personal car radio — for my own use — grew into an app on Google Play for everyone. A few people from YouTube and my family inspired me and helped me through the hardest moment: getting through Google Play's review and testing process. Thank you all.*Special thanks to lead tester Ian Davidson
+*PS. A small project that started as a free, ad-free personal car radio — for my own use — grew into an app on Google Play for everyone. A few people from YouTube and my family inspired me and helped me through the hardest moment: getting through Google Play's review and testing process. Thank you all.Special thanks to lead tester Ian Davidson *
