@@ -1,4 +1,4 @@
-io# 📻 RadioAndroid PRO
+📻 RadioAndroid PRO
 
 🌐 **[Project Website & Google Play → toevi.github.io/RadioAndroidPro](https://toevi.github.io/RadioAndroidPro/)**
 
