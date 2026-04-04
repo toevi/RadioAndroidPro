@@ -1306,17 +1306,13 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 | `Microsoft.Extensions.Logging.Debug` | 10.0.5 | Debug logging |
 | `CommunityToolkit.Maui` | 14.0.1 | MAUI community extensions |
 | `LibVLCSharp` | 3.9.6 | C# bindings for LibVLC audio engine |
-| `Vlc.DotNet.Core` | 3.1.0 | VLC .NET core interop layer — used alongside `LibVLCSharp`, not interchangeable |
-| `Vlc.DotNet.Core.Interops` | 3.1.0 | VLC native interop helpers — part of the same required pair |
 
 ### Android-only
 
 | Package | Version | Purpose |
 |---|---|---|
 | `VideoLAN.LibVLC.Android` | 3.7.0-beta | Native LibVLC library (`.so` binaries for ARM/x86). **Beta is intentional** — this is the only version that compiles correctly against the memory layout of modern Android devices (ARMv8/64-bit). The stable 3.x release produces linker errors on current hardware. Google Play accepts and distributes this build without issues. |
-| `LibVLCSharp` | 3.9.6 | C# bindings for LibVLC. Required alongside `Vlc.DotNet.Core` — both serve different roles and are not interchangeable. |
-| `Vlc.DotNet.Core` | 3.1.0 | VLC .NET core interop layer. Works together with `LibVLCSharp`, not as a replacement — removing either breaks the integration. |
-| `Vlc.DotNet.Core.Interops` | 3.1.0 | VLC native interop helpers. Part of the same required pair. |
+| `LibVLCSharp` | 3.9.6 | C# bindings for LibVLC — the only VLC wrapper used in this project |
 | `LibVLCSharp.Android.AWindowModern` | 3.9.6 | Android surface/window integration for LibVLC |
 | `Xamarin.AndroidX.Media` | 1.7.1.2 | `MediaBrowserServiceCompat` — required for Android Auto |
 | `Xamarin.AndroidX.Lifecycle.*` | 2.10.0.2 | Must be explicitly pinned — see below |
@@ -1345,11 +1341,6 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 <PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
 ```
 
-### Windows-only
-
-| Package | Version | Purpose |
-|---|---|---|
-| `Microsoft.Maui.Graphics.Win2D.WinUI.Desktop` | 10.0.50 | Win2D rendering backend for Windows |
 
 ---
 
