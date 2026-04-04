@@ -32,6 +32,7 @@ This article documents not only the general app description, but also specific t
 - VLC Equalizer in .NET MAUI (LibVLCSharp)
 - AAOS Album Art: Bitmap vs URI (porting from AA/BT to Automotive)
 - **Google Play AAOS Distribution: Why the APK works but the store rejects it**
+- **Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)**
 - LibVLCSharp Memory Safety Checklist (SIGSEGV prevention, cleanup rules)
 - System Architecture & Protection Layers
 - AndroidManifest.xml — Permissions Overview
@@ -57,10 +58,13 @@ That is the real technical challenge — and the reason stream stability require
 | 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
-| 🚙 Android Automotive OS | An attempt to port it to AAOS is in the testing phase of Google Console, described below |
+| 🚙 Android Automotive OS | Port abandoned — technical implementation complete but incompatible with Google Play Automotive Android content policy (see section below) |
 | 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. Wear OS watches not supported. |
 
 ---
+
+**Uwaga:** Aplikacja działa idealnie i bez żadnych ograniczeń na tabletach z natywnym Androidem (w tym montowanych fabrycznie w samochodach), z Android Auto, z Bluetooth car/head unit oraz na Android Automotive OS w wersji mobilnej (instalowanej na tablecie lub emulatorze). Możliwe jest pełne zarządzanie stacjami (dodawanie, edycja, usuwanie) zarówno w wersji mobilnej, jak i w wersji dostosowanej do AAOS. Jednak nawet po pełnym dostosowaniu do AAOS, aplikacja została odrzucona w Google Play na tej platformie, ponieważ polityka AAOS zabrania manipulacji (dodawania stacji) na ekranie samochodowym — mimo że technicznie jest to możliwe i działa bez zarzutu poza restrykcjami sklepu. Ograniczenie to nie dotyczy Android Auto, Bluetooth ani natywnych tabletów z Androidem.
+
 
 ## 🛡 Stream Stability — The Hard Problem
 
@@ -1085,6 +1089,55 @@ The requirements listed in this section were discovered through that process —
 | 5 | `OnGetRoot()` returns valid root for any caller | `AudioPlaybackService.cs` | Package whitelist blocks review robot |
 | 6 | `OnLoadChildren()` always calls `SendResult()` | `AudioPlaybackService.cs` | Deferred result times out in review |
 | 7 | Automotive track created in Play Console | Google Play Console | App published only to phone track |
+
+---
+
+### 9. Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)
+
+Meeting all the technical requirements documented in section 8 above — the descriptor file, the manifest declarations, the correct `MediaBrowserService` binding, the AAB format, the URI-based album art — is necessary but not sufficient for passing Google Play's AAOS certification.
+
+**The blocking constraint is not technical. It is a UI policy requirement specific to Automotive OS.**
+
+#### Why Android Auto passes but AAOS does not
+
+The app ships with **four built-in starter stations** that are always present on a fresh install. This is enough for Android Auto certification — the browsable content tree is not empty, the review robot finds stations in `OnLoadChildren`, and the AA review passes.
+
+Android Auto also operates in a fundamentally different model: the media app runs on the **user's phone**, and the head unit is a display client. Content management — adding stations, editing URLs — happens on the phone screen, outside driving mode. AA policy allows this because the interaction takes place on the companion device, not on the car's display.
+
+Android Automotive OS is different. AAOS is a **standalone system** built into the car — there is no companion phone. Every user interaction happens on the car's screen, and every action is therefore subject to the Automotive UI restrictions that apply while the vehicle is in motion.
+
+#### The blocking AAOS UI policy
+
+Google's Automotive UI guidelines prohibit, while the vehicle is moving:
+
+- **Text input of any kind** — no keyboards, no URL fields, no search boxes
+- **Complex navigation flows** — no action that requires more than two taps to reach
+- **Setup or configuration actions** — no flows that require the user to provide data
+
+Adding a station in RadioAndroid requires typing a station name and a stream URL. This is the core user action the app is built around. On AAOS, this action is categorically prohibited by policy. There is no compliant way to implement it on the car's screen.
+
+#### Why the four starter stations do not solve it
+
+The four default stations satisfy the "content present at install" requirement and are enough to pass the AA review. They do not satisfy the AAOS requirement because:
+
+- AAOS certification reviewers evaluate whether the app's primary functionality is accessible on the car screen in a policy-compliant way — not just whether something plays
+- A user who wants to listen to any station outside those four defaults has no compliant path to add it on AAOS
+- The app's value proposition — *play any internet radio stream you choose* — is irreconcilable with a policy that prohibits the input actions needed to choose a stream
+
+**Conclusion: the port to Android Automotive OS was abandoned.**
+
+The app functions correctly on AAOS at a technical level — playback, media session, browse tree, album art, notifications all work. A sideloaded APK runs on a real car head unit without issues. But the app cannot be published to the Google Play Automotive track because the Automotive Android content policy makes the app's core feature — adding user-defined stations — impossible to implement in a compliant way on the car screen.
+
+| Requirement | Android Auto | Android Automotive OS |
+|---|---|---|
+| Browsable content present at install | ✅ Four starter stations | ✅ Four starter stations |
+| Content management (adding stations) | ✅ Done on phone screen — outside driving mode | ❌ Must happen on car screen — text input prohibited |
+| User can access any stream they choose | ✅ Add stations on phone, play in car | ❌ No compliant way to add stations on AAOS screen |
+| Certification result | ✅ Passed Google Play AA review | ❌ Port abandoned — policy incompatibility |
+
+The AAOS-specific technical work documented in sections 7 and 8 of this README — Album Art URI handling, automotive descriptor, `OnGetRoot()` and `OnLoadChildren()` implementation — remains in the codebase and functions correctly. The blocker is not the code. It is the policy.
+
+A workaround would require either a server-side station catalog (turning the app into a service with its own backend) or restricting the app to a fixed built-in list with no user additions. Both fundamentally change what the app is. That trade-off was not accepted.
 
 ---
 
