@@ -1148,7 +1148,8 @@ A workaround would require either a server-side station catalog (turning the app
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                        UI Layer                             │
-│  - RadioPage.xaml, StationPage.xaml, EditStationPage.xaml    │
+│  - RadioPage.xaml, StationPage.xaml                          │
+│  - EditStacjaPage.xaml, EditStationPage.xaml                  │
 │  - User interaction: Play, Stop, Next, Prev, station select  │
 └───────────────▲──────────────────────────────────────────────┘
                 │
@@ -1207,8 +1208,10 @@ RadioAndroid/
 │   │   ├── RadioPage.xaml.cs       — Main player logic
 │   │   ├── StationPage.xaml        — Station list (list + tile view)
 │   │   ├── StationPage.xaml.cs     — Station list logic
-│   │   ├── EditStationPage.xaml    — Add/edit stations, playlist, EQ
-│   │   ├── EditStationPage.xaml.cs — Add/edit logic
+│   │   ├── EditStacjaPage.xaml     — Single station edit form (name + URL)
+│   │   ├── EditStacjaPage.xaml.cs  — Single station edit logic (Save / Delete)
+│   │   ├── EditStationPage.xaml    — Playlist Save/Load (JSON + PLS) + 9-band EQ
+│   │   ├── EditStationPage.xaml.cs — Playlist and EQ logic
 │   │   ├── HelpPage.xaml           — User guide
 │   │   └── HelpPage.xaml.cs        — User guide logic
 │   ├── Services/
