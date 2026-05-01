@@ -811,10 +811,6 @@ None of these are handled by the framework. Each one is a deliberate decision in
 >
 > The favorites feature is implemented and functional, but it is currently in private testing. The reason is the synchronization complexity documented in this section and section 6.2 — five separate surfaces that must all agree on the same state, across a background service, system notification, Android Auto queue, Bluetooth media session, and two UI pages, with no built-in platform mechanism to coordinate them. What looks like a simple star button turned out to require a significant amount of careful engineering to get right on all surfaces. It may be included in a future public release once testing across more devices is complete.
 
-> **Note:** The solution described here is written specifically for this application and its architecture
->
-> There was no ready-made solution to copy. No MAUI + C# + Android example covering this combination existed at the level of detail needed — background service state, system notification metadata, Android Auto queue, and Bluetooth media session all reflecting the same boolean at the same time. The solution below is the result of trial and error: implementing, testing on a real device, observing where state went stale or diverged, and fixing each surface one by one until all five were consistent. If it looks straightforward in retrospect, that is because the failed attempts are not shown here.
-
 Favorites look simple from the outside: mark a station with a star, filter to show only favorites, navigate between them. The implementation turned out to be one of the more subtle synchronization problems in the app — touching five separate surfaces that all need to agree on the same state. This pattern applies to any MAUI app where a shared boolean state must be reflected across a background service, system notifications, and multiple UI pages simultaneously — and where the platform provides no built-in mechanism (like LiveData or ViewModel) to do it automatically.
 
 **The five surfaces that consume favorite state**
@@ -829,29 +825,25 @@ Favorites look simple from the outside: mark a station with a star, filter to sh
 
 **The split of responsibilities — why it matters**
 
-The Radio Page star button is **filter-only** — it controls whether `◀ Prev` and `Next ▶` navigate only through favorite stations. It does **not** add or remove favorites. That action lives exclusively in the Stations List tab, where each station has its own toggle. This separation was a deliberate UX decision: conflating "filter" and "edit" into the same button on the player screen caused confusion about what the button actually did.
+The player UI star button is **filter-only** — it controls whether Prev and Next navigate only through favorite stations. It does **not** add or remove favorites. That action lives exclusively in the station list, where each station has its own toggle. This separation was a deliberate UX decision: conflating "filter" and "edit" into the same button on the player screen caused confusion about what the button actually did.
 
-The consequence: when the filter is ON, drag-and-drop reordering in the Stations List is disabled. Reordering while filtered would rewrite the JSON in filtered order, destroying the positions of non-favorite stations.
+The consequence: when the filter is ON, drag-and-drop reordering in the station list is disabled. Reordering while filtered would save stations in filtered order, destroying the positions of non-favorite stations.
 
-**Stale cache problem**
+**Stale state problem**
 
-The station list is loaded from `stacje.json` into an in-memory `List<Stacja>` in both RadioPage and the Android background service. If the user edits favorites in the list and then navigates or starts playback, the old in-memory list has stale `IsFavorite` values. Three places were affected:
-
-1. `RadioPage` — reloads the list from file on every `OnAppearing()` and before resolving `CurrentStationIsFavorite` in `LoadAndPlayNewStation()`.
-2. `AudioPlaybackService.Queue` — calls `RefreshStationsAndQueue()` which re-reads `stacje.json` from disk before rebuilding the AA queue and re-syncing `CurrentStationIsFavorite`.
-3. Notification / metadata — `UpdateNowPlaying()` prefixes the title with `★` based on `RadioStateService.CurrentStationIsFavorite`, which is set fresh from the reloaded list before each `StartForegroundService()` call.
+The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the persisted store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
 
 **Empty favorites fallback**
 
-When the filter is ON but no station is marked as a favorite, `◀ Prev` / `Next ▶` fall back silently to the full list. Without this fallback, the first press of Prev/Next after enabling the filter with zero favorites would do nothing — a dead end the user could not escape without turning the filter off first. The same fallback is applied in the AA queue builder.
+When the filter is ON but no station is marked as a favorite, Prev/Next fall back silently to the full list. Without this fallback, enabling the filter with zero favorites would produce a dead end the user could not escape without turning the filter off.
 
-**`CurrentStationIsFavorite` as the single source of truth**
+**Single source of truth**
 
-`RadioStateService.CurrentStationIsFavorite` (a `bool` property) is the shared signal between the UI, the service, and the notification layer. It is set in `LoadAndPlayNewStation()` (UI side) and re-synced in `RefreshStationsAndQueue()` (service side) whenever the queue is rebuilt. All three notification/metadata paths read it from there — no direct JSON access at render time.
+A shared `CurrentStationIsFavorite` flag is the signal between the UI, the service, and the notification layer. It is set fresh from the reloaded station list on every playback start and every queue rebuild. No surface reads favorite state directly from persistent storage at render time — they all read from the shared flag.
 
-**`FavoritesOnly` persistence**
+**Filter state persistence**
 
-The filter toggle state is saved to `SettingsService` (a JSON-backed settings file) so it survives app restarts. On `OnAppearing()`, RadioPage restores `FavoritesOnly` from settings before the first `UpdateUIFromState()` call — so the filter button reflects the last-used state immediately, without a flicker.
+The filter toggle state is persisted so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker.
 
 ---
 
@@ -867,51 +859,37 @@ Android Auto is pull-based: AA requests the queue by calling `OnLoadChildren()`,
 
 **Three bugs found and fixed**
 
-**Bug 1 — `OnLoadChildren` ignored `FavoritesOnly`**
+**Bug 1 — `OnLoadChildren` ignored the favorites filter**
 
-`OnLoadChildren` is called by AA when it opens or refreshes the station list. The original implementation always returned the full list of stations, regardless of whether the favorites filter was on. AA would show all stations even when the user had set `FavoritesOnly = true`.
+`OnLoadChildren` is called by AA when it opens or refreshes the station list. The original implementation always returned the full list of stations, regardless of whether the favorites filter was on. AA would show all stations even when the filter was active.
 
-Fix: `OnLoadChildren` now reads `RadioStateService.Instance.FavoritesOnly` and filters the station list before building `MediaItem` entries and setting `SetQueue`. Fallback to the full list if `FavoritesOnly` is on but no stations are favorited (same rule as the phone UI).
+Fix: `OnLoadChildren` now respects the filter state and returns only favorite stations when the filter is on. Fallback to the full list if the filter is on but no stations are favorited (same rule as the phone UI).
 
-**Bug 2 — `activeQueueItemId` was an index into `_stations`, not into the displayed queue**
+**Bug 2 — active item highlight used the wrong index**
 
-`UpdatePlaybackState` sets `SetActiveQueueItemId(id)` to tell AA which row to highlight as currently playing. The original code passed `_currentIndex` — the position of the station in the full `_stations` list. When the favorites filter was on, the displayed queue had fewer items (e.g. indices 0-2), but `_currentIndex` reflected the full list (e.g. index 7). AA could not find any item with id=7 in a 3-item queue, so it showed no highlight at all.
+AA highlights the currently playing row using an item ID from `PlaybackState`. The original code passed the station's position in the full list. When the favorites filter was on, the displayed queue had fewer items — AA could not find the full-list index in the shorter queue and showed no highlight at all.
 
-Fix: a separate field `_activeQueueItemId` stores the station's position within the *displayed* (filtered or full) queue. It is computed alongside `SetQueue` in every place that builds the queue (`OnStartCommand`, `RefreshStationsAndQueue`, `OnLoadChildren`, `OnNext`, `OnPrevious`, `PlayFromQueueIndex`). `UpdatePlaybackState` uses `_activeQueueItemId` exclusively.
+Fix: the active item ID is now always computed relative to the *displayed* (filtered or full) queue — not the full station list. It is recalculated in every place that builds the queue so it stays correct across navigation and filter changes.
 
 **Bug 3 — filter toggle did not notify AA to re-request the queue**
 
-When the user toggled the favorites filter (in RadioPage or the Stations List), the in-memory state changed and the phone UI re-filtered correctly. But AA was not told to call `OnLoadChildren` again. The result: AA kept showing the old queue (full list or previously filtered list) until the user navigated away and back in the AA media browser.
+When the user toggled the favorites filter, the phone UI re-filtered correctly. But AA was not told to call `OnLoadChildren` again. The result: AA kept showing the old queue until the user navigated away and back.
 
-Fix: both `RadioPage.OnFavoritesFilterButtonClicked` and `StacjePage.OnFavFilterClicked` now call `PlaybackHelper.NotifyAARefresh()` after changing `FavoritesOnly`. `NotifyAARefresh` sends a `REFRESH_CHILDREN` intent to the foreground service, which calls `NotifyChildrenChanged("__ROOT__")`. AA receives this signal and calls `OnLoadChildren` again, now getting the correctly filtered list.
+Fix: every filter toggle and every favorites add/remove now sends a signal to the foreground service, which calls `NotifyChildrenChanged()`. AA receives this signal and re-requests the queue, now getting the correctly filtered list.
 
 **Scenario table**
 
 | Scenario | Before fix | After fix |
 |---|---|---|
-| Open AA with `FavoritesOnly=ON` | Full list shown | Filtered list shown |
-| Toggle filter ON from RadioPage | AA still shows full list | AA refreshes and shows filtered list |
-| Toggle filter ON from Stations List | AA still shows full list | AA refreshes and shows filtered list |
+| Open AA with filter ON | Full list shown | Filtered list shown |
+| Toggle filter ON from player screen | AA still shows full list | AA refreshes and shows filtered list |
+| Toggle filter ON from station list | AA still shows full list | AA refreshes and shows filtered list |
 | Add a station to favorites while filter is ON | AA list does not update | AA refreshes and shows updated filtered list |
 | Remove a station from favorites while filter is ON | AA list does not update | AA refreshes, station disappears from list |
 | Play station, then toggle filter | Active highlight disappears or points to wrong row | Active highlight stays on the correct row |
 | Skip Next/Previous via AA while filter is ON | Active highlight shows wrong station | Active highlight moves to the correct next/previous station |
 | Tap a station in AA list while filter is ON | Correct station plays but wrong row highlighted | Correct station plays and correct row highlighted |
-| `FavoritesOnly=ON` but no favorites exist | AA shows empty queue | AA falls back to full list (same as phone UI) |
-
-**Key files and their roles**
-
-| File | Role |
-|---|---|
-| `AudioPlaybackService.cs` — `OnLoadChildren` | Reads `FavoritesOnly`, filters the list, computes `_activeQueueItemId` before `SetQueue`, returns filtered `MediaItem` list to AA |
-| `AudioPlaybackService.Queue.cs` — `RefreshStationsAndQueue` | Called on `REFRESH_CHILDREN` intent; reloads file, refilters, recomputes `_activeQueueItemId`, calls `UpdatePlaybackState` so AA picks up the new active item |
-| `AudioPlaybackService.Queue.cs` — `GetNavList` | Single method that computes the navigation list (filtered or full, with fallback) — used by `OnNext`, `OnPrevious`, `PlayFromQueueIndex` to ensure all three paths use identical logic |
-| `AudioPlaybackService.Queue.cs` — `ApplyStationSwitch` | Sets `_currentIndex`, `_activeQueueItemId`, `CurrentUrl/Title`, all `RadioStateService` fields, and calls `SetQueue` atomically inside the queue lock — called by `OnNext`, `OnPrevious`, `PlayFromQueueIndex` |
-| `AudioPlaybackService.Media.cs` — `UpdatePlaybackState` | Passes `_activeQueueItemId` (not `_currentIndex`) to `SetActiveQueueItemId` |
-| `Helpers/PlaybackHelper.cs` — `NotifyAARefresh` | Sends `REFRESH_CHILDREN` intent to the service — called after every filter toggle and every favorites add/remove |
-| `RadioPage.xaml.cs` — `OnFavoritesFilterButtonClicked` | Toggles `FavoritesOnly`, calls `NotifyAARefresh` |
-| `StacjePage.xaml.cs` — `OnFavFilterClicked` | Toggles `FavoritesOnly`, calls `NotifyAARefresh` |
-| `StacjePage.xaml.cs` — `OnFavoriteButtonClicked` | Adds/removes favorite, saves to file, calls `NotifyAARefresh` |
+| Filter ON but no favorites exist | AA shows empty queue | AA falls back to full list (same as phone UI) |
 
 ---
 
