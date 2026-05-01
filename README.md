@@ -453,7 +453,11 @@ private void StopForegroundCompat()
 
 ### 3.1. Station Edit, Add, Delete — Service Must Be Stopped First
 
-> **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a JSON-backed station list that the service reads once at startup.
+> **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a flat JSON file used as the station store.
+
+**Why JSON, not a database**
+
+The station list is stored as a plain JSON file — one file, no schema, no migrations, no extra libraries. This was a deliberate design choice: the file is small, human-readable, directly editable, and trivially serialized with the built-in .NET JSON APIs. There is no SQLite dependency, no ORM, no database engine to initialize or version. For a list of internet radio URLs, a database would add complexity without adding value. The trade-off is that the file is read once at startup — it is not watched for changes at runtime. That constraint is what makes the rule below necessary.
 
 **The symptom**
 
