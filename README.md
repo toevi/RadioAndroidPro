@@ -1748,4 +1748,4 @@ Users are responsible for ensuring they have proper access rights to all streams
 
 ---
 
-Thank you all. Special thanks to lead tester Ian Davidson
+Special thanks to lead tester Ian Davidson
