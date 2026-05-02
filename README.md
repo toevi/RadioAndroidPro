@@ -24,7 +24,7 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 > *The real work happens in the background services: audio engine management, stream recovery, Android Auto integration, Bluetooth session handling, and state synchronization across the app. Getting all of this to work reliably in C# and .NET MAUI — a non-native layer on top of Android — was significantly harder than the equivalent in Kotlin, where the platform APIs are first-class citizens. MAUI abstracts the platform, which is convenient until you need to go deep into Android internals. Then you're fighting the framework as much as the problem. The result: a single C# codebase that runs on phones, tablets, Android TV, TV boxes, Android Desktop, Android Auto, Android Automotive OS, Bluetooth devices, and ChromeOS — tested and working on all of them.*
 
-> *Why C# and .NET MAUI? Because MAUI is a cross-platform UI framework — the same codebase can target Android, Windows, and macOS without rewriting the application layer. Kotlin and Gradle are Android-only; there is no migration path from there. With C# and MAUI, a Windows desktop port is a realistic next step, and a macOS port follows the same logic. A Windows version is planned — likely the last milestone before the project is considered feature-complete.*
+> *Why C# and .NET MAUI? One codebase runs natively on phones, tablets, Android Desktop, Android Auto, AAOS, and ChromeOS — without separate layout files or separate modules per form factor. Kotlin and Gradle are Android-only; there is no migration path from there to Windows or macOS. A Windows desktop port is a planned next step — adding one target to `.csproj` is all it takes. See [Why .NET MAUI — Not Kotlin, Not Gradle](#-why-net-maui--not-kotlin-not-gradle) for a full technical comparison.*
 
 > *This app navigates uncharted waters. There are very few examples of .NET MAUI + C# + LibVLC on Android pushed this far — into native audio focus, background services, Android Auto, and deep platform integration. Some things did not work on the first attempt, or the second. The solutions in this README are the result of that process — not a straight line from idea to working code, but a map drawn while sailing.*
 
@@ -32,27 +32,26 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 ## Table of Contents
 
-This document covers the app from two angles: what it does, and what it took to make it work. The second part is longer. If you are a developer building anything with LibVLCSharp, .NET MAUI, Android Auto, or Android background audio — the sections below are the part that does not exist in any official documentation.
-
-- Two-layer stream protection (VLC engine + app logic)
-- VLC parameters: buffering, reconnect, engine and per-stream options
-- Reconnect logic: reconnect loop, watchdog, cellular fallback
-- Station list over 10: pagination and Android Auto handling
-- Stream Stability: The Hard Problem
-- Technical Deep Dives (VLC deadlocks, native memory, Android foreground service, Android Auto integration)
-- Station Edit, Add, Delete — Service Must Be Stopped First
-- AudioFocus and UI/Service State Synchronization
-- Favorites — Multi-Surface State Synchronization
-- Android Auto + Favorites — Synchronization Problem and Solution
-- VLC Equalizer in .NET MAUI (LibVLCSharp)
-- AAOS Album Art: Bitmap vs URI (porting from AA/BT to Automotive)
-- **Google Play AAOS Distribution: Why the APK works but the store rejects it**
-- **Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)**
-- LibVLCSharp Memory Safety Checklist (SIGSEGV prevention, cleanup rules)
+- Why .NET MAUI — Not Kotlin, Not Gradle
+- Stream Stability — The Hard Problem
+- Technical Deep Dives
+  - 1. LibVLC Native Thread Deadlock
+  - 2. SIGSEGV from LibVLCSharp Native Memory
+  - 3. Foreground Service Crash on Android 12 / 12.1
+  - 3.1. Station Edit, Add, Delete — Service Must Be Stopped First
+  - 4. MediaBrowserServiceCompat and Android Auto
+  - 5. AudioFocus and UI/Service State Synchronization
+  - 5.1. Favorites — Multi-Surface State Synchronization
+  - 5.2. Android Auto + Favorites — Synchronization Problem and Solution
+  - 6. LibVLCSharp Memory Safety Checklist
+  - 7. VLC Equalizer in .NET MAUI (LibVLCSharp)
+  - 8. AAOS Album Art: Bitmap vs URI
+  - 9. Google Play AAOS Distribution
+  - 10. Android Automotive OS — Why the Port Was Abandoned
 - System Architecture & Protection Layers
-- AndroidManifest.xml — Permissions Overview
-- Project Structure & Key Dependencies
+- Key Dependencies
 - Development Environment
+- Requirements
 - License & Author
 
 ---
@@ -80,6 +79,164 @@ That is the real technical challenge — and the reason stream stability require
 
 > **Note:** The app works fully and without any restrictions on native Android tablets (including factory-installed in-car units), Android Auto, Bluetooth car/head units, and Android Automotive OS in mobile mode (installed on a tablet or emulator). Full station management — add, edit, delete — works in all of these configurations. However, after complete AAOS adaptation, the app was rejected on Google Play for that platform: AAOS policy prohibits station management (adding stations) on the car screen, even though the feature works correctly outside the store's restrictions. This limitation does not affect Android Auto, Bluetooth, or native Android tablets.
 
+
+---
+
+## ⚙️ Why .NET MAUI — Not Kotlin, Not Gradle
+
+### Scalability: one codebase, multiple platforms
+
+Kotlin and Gradle are Android-only. There is no migration path from there to Windows or macOS — it is architecturally impossible. C# and .NET MAUI compile the same codebase natively for Android, Windows, and macOS without rewriting the application layer.
+
+| | .NET MAUI (C#) | Kotlin + Gradle |
+|---|---|---|
+| Android | ✅ | ✅ |
+| Windows | ✅ (WinUI 3) | ❌ |
+| macOS | ✅ (Mac Catalyst) | ❌ |
+| iOS | ✅ | ❌ |
+| Single codebase | ✅ | ❌ Android-only |
+
+For this project that means: a Windows Desktop port = adding a target in `.csproj` and running the build. Playback logic, reconnect, watchdog, station management — all of it already works, nothing rewritten.
+
+**Kotlin:**
+```kotlin
+// Kotlin/Android — does not compile for Windows or macOS
+// Every new target = new project, new language, new codebase
+
+class RadioService : Service() {
+    fun startPlayback(url: String) {
+        // Android-only. There is no path from here to desktop.
+    }
+}
+```
+
+**C# / MAUI:**
+```csharp
+// Same code runs on Android, Windows, and macOS
+// Changing the target = one line in .csproj
+
+public partial class RadioService
+{
+    public void StartPlayback(string url)
+    {
+        // Portable logic — platform is irrelevant
+        _mediaPlayer.Play(new Media(_libVLC, new Uri(url)));
+    }
+}
+```
+
+```xml
+<!-- .csproj — adding a Windows target is literally one line -->
+<TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
+```
+
+---
+
+### One codebase — all form factors
+
+In Kotlin, targeting phones, tablets, desktop, Android Auto, and Android Automotive OS means separate layout resources, separate navigation patterns, and often separate modules. Each form factor has its own design contract with the platform.
+
+In MAUI, the same layout adapts to every screen size and surface through a single responsive definition. No separate layout files per device class. No duplicated navigation logic. The same C# page renders correctly on a 5" phone, a 12" tablet, a desktop window, an Android Auto head unit, and an AAOS in-dash display.
+
+**Kotlin — separate layout per form factor:**
+```kotlin
+// res/layout/player.xml          → phone
+// res/layout-large/player.xml    → tablet
+// res/layout-xlarge/player.xml   → desktop / large screen
+// res/layout-car/player.xml      → Android Auto (separate MediaBrowserService UI contract)
+// Each file maintained independently — any UI change must be applied to all of them
+```
+
+**C# / MAUI — one layout, all surfaces:**
+```csharp
+// Single page definition — adapts to any screen size at runtime
+new Grid
+{
+    ColumnDefinitions =
+    {
+        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+        new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) }
+    }
+}
+
+// Responsive behavior via OnSizeAllocated — one place, all targets
+protected override void OnSizeAllocated(double width, double height)
+{
+    base.OnSizeAllocated(width, height);
+    MainLayout.Orientation = width > 700
+        ? StackOrientation.Horizontal   // tablet / desktop / AAOS
+        : StackOrientation.Vertical;    // phone
+}
+```
+
+Android Auto and AAOS use a separate UI surface driven by `MediaBrowserService` — MAUI does not interfere with that contract. The service layer, state management, and playback logic are shared in full. Only the surface that renders the controls differs, and that difference is handled by the platform, not by duplicated application code.
+
+The result: UI changes, bug fixes, and new features are applied once and propagate to every supported surface — phones, tablets, Android Desktop, Android Auto, AAOS, and ChromeOS.
+
+---
+
+### Performance and responsiveness
+
+MAUI compiles to native AOT (Ahead-of-Time) code — no interpreter, no JIT in hot paths. The UI renders through native platform controls: on Android these are real Android views, not a webview or an emulated canvas.
+
+LibVLC runs on a native C thread at OS level — MAUI does not get in its way. The C# layer is thin: state management, event dispatching, reconnect logic. The audio engine operates below the JVM and below the .NET runtime regardless.
+
+**Kotlin + Gradle — extra JVM layer on top:**
+```kotlin
+// Kotlin compiles to JVM bytecode → Dalvik/ART
+// JIT on startup, GC pauses, warmup on first run
+
+lifecycleScope.launch {
+    viewModel.playbackState.collect { state ->
+        updateUI(state) // through LiveData → ViewModel → Coroutine → UI
+    }
+}
+```
+
+**C# / MAUI — AOT, no JVM:**
+```csharp
+// AOT compilation → native ARM binary, no JIT warmup
+// Events directly from the VLC engine, no intermediate layer
+
+_mediaPlayer.Playing += (_, _) =>
+    MainThread.BeginInvokeOnMainThread(() => UpdateUI(PlaybackState.Playing));
+```
+
+No ViewModel/LiveData/Coroutine stack = fewer layers between event and UI. Dispatching from a VLC thread to the Android main thread is one method call (`MainThread.BeginInvokeOnMainThread`), not a chain of reactive streams.
+
+---
+
+### Dependencies: NuGet vs Gradle
+
+Kotlin and Gradle have a well-known dependency hell problem — transitive version conflicts cause build failures that are hard to diagnose without deep knowledge of the Gradle ecosystem.
+
+NuGet with explicit version pinning is deterministic: every dependency has exactly one version, conflicts are visible immediately, and resolved in a single `.csproj` file.
+
+**Gradle — transitive dependency version conflict:**
+```groovy
+// build.gradle — versions can be silently overridden by transitive deps
+// "Duplicate class kotlin.collections.jdk8" — classic hard-to-trace error
+dependencies {
+    implementation "androidx.media:media:1.7.1"
+    // Gradle pulls its own lifecycle versions — they may be incompatible
+}
+```
+
+**NuGet — explicit pinning, deterministic build:**
+```xml
+<!-- .csproj — all versions explicit, build is always reproducible -->
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Media" Version="1.7.1.2" />
+```
+
+---
+
+### Summary
+
+.NET MAUI is not a compromise. It is a scalability choice: one codebase, native performance, a straightforward path to Windows and macOS, and no per-form-factor layout duplication. Kotlin and Gradle are the right choice if the target is Android phones and only ever Android phones. If the app needs to run correctly on tablets, desktops, Android Auto, and AAOS — and a desktop port is a realistic next step — MAUI eliminates that technical debt from the first commit.
+
+---
 
 ## 🛡 Stream Stability — The Hard Problem
 
@@ -159,7 +316,6 @@ This section documents the problems that had no answer in any official documenta
 If you are building a radio or audio app with this stack and hitting walls, this is for you.
 
 ---
-
 ### 1. LibVLC Native Thread Deadlock
 
 **The symptom**
@@ -350,6 +506,7 @@ private void SwitchStation(string url)
 
 ---
 
+
 ### 3. Foreground Service Crash on Android 12 / 12.1 (API 31–32)
 
 **The symptom**
@@ -451,6 +608,7 @@ private void StopForegroundCompat()
 
 ---
 
+
 ### 3.1. Station Edit, Add, Delete — Service Must Be Stopped First
 
 > **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a flat JSON file used as the station store.
@@ -488,6 +646,7 @@ If this rule is not enforced and the user edits the URL of the currently playing
 This is not a design flaw that can be easily eliminated — it is a consequence of how Android foreground services and native media engines work. The service owns the native playback object. Injecting new state into a running native media engine mid-stream is not safe without a full stop-reinitialize-play cycle, which is effectively the same as stopping and restarting. Stopping the service before editing is the correct and safe approach.
 
 ---
+
 
 ### 4. MediaBrowserServiceCompat and Android Auto
 
@@ -705,7 +864,206 @@ public override void OnCreate()
 
 ---
 
-### 5. VLC Equalizer in .NET MAUI (LibVLCSharp)
+
+### 5. AudioFocus and UI/Service State Synchronization
+
+This is one of the hardest problems in Android audio development in general — and significantly harder in .NET MAUI than in Kotlin, where the platform provides first-class tools for exactly this scenario.
+
+**The problem**
+
+A radio app does not live in isolation. Android is a multitasking system and audio focus is a shared resource. At any moment, another app or the system itself can interrupt playback: an incoming SMS triggers a notification sound, Android Auto navigation starts speaking turn-by-turn directions, the user opens YouTube or another media player, a phone call arrives. Each of these events sends an AudioFocus signal to the app. The app must react correctly — pause or duck the volume — and then know when and whether to resume.
+
+On top of that, the UI and the background service are separate components with separate lifecycles. The service runs continuously in the background. The UI can be destroyed and recreated at any time — the user switches to another app, the system kills the UI to reclaim memory, the screen rotates, the user taps the notification and returns to the app. Every time the UI comes back, it must reconnect to the service and restore the exact current state: which station is playing, whether it is paused, what the stream metadata shows. A stale or ghost UI state — showing "playing" when the service is paused, or the wrong station name — is a real bug that confuses users.
+
+In Kotlin this is solved with LiveData, ViewModel, and the Android lifecycle architecture components — all designed to survive UI recreation and bind automatically to the service state. In MAUI none of this exists. The framework abstracts the platform, which means it also abstracts away these tools. Everything has to be built manually.
+
+**AudioFocus handling — what must be covered**
+
+Android sends different AudioFocus events depending on what is happening, and each requires a different response:
+
+- `AUDIOFOCUS_LOSS` — another app has taken focus permanently (user started YouTube, a media player). The app must stop playback and not resume automatically. Resuming uninvited after the user chose another app is a serious UX violation.
+- `AUDIOFOCUS_LOSS_TRANSIENT` — focus lost temporarily (phone call, navigation announcement). The app must pause and resume automatically when focus returns.
+- `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK` — another app needs audio briefly at low volume (notification sound). The app can reduce volume instead of pausing, then restore it.
+- `AUDIOFOCUS_GAIN` — focus returned. The app must resume if it was paused due to a transient loss, but must not resume if the user stopped playback manually or if focus was lost permanently.
+
+The critical distinction is between a user-initiated stop and a system-initiated pause. The reconnect logic and AudioFocus resume logic must never overlap — a user pressing Stop must always win, regardless of what AudioFocus signals arrive afterward.
+
+**UI/Service synchronization — what must be covered**
+
+When the UI is recreated or the user returns to the app, the following must all be restored correctly and instantly:
+
+- Current playback state (playing, paused, stopped, reconnecting)
+- Current station name and metadata (stream title, artist if available)
+- Correct visual state of all controls (play button, station name, status text)
+- Android Auto interface state — if the car head unit is connected, it has its own UI that must also reflect the current state
+
+The synchronization must work in all entry points: the user taps the app icon, the user taps the persistent notification, the user returns from Android Auto, the user returns from another app. Each of these can trigger UI recreation with a different back stack state.
+
+In MAUI the solution requires a shared state service (in this project `RadioStateService`) that acts as the single source of truth. The background service writes to it, the UI reads from it. The connection between the two must survive UI recreation without leaking memory or creating duplicate subscriptions. This means careful management of event subscriptions — subscribing when the page appears, unsubscribing when it disappears — and ensuring the state service itself is a singleton that outlives any individual page.
+
+**Why this took a long time**
+
+The interactions between AudioFocus events, reconnect logic, user-initiated stops, and UI lifecycle are a matrix of edge cases. Each combination has to behave correctly:
+
+- User stops → navigation speaks → AudioFocus gain arrives → app must not resume
+- Stream drops → reconnect starts → phone call arrives → reconnect must pause → call ends → reconnect resumes
+- User pauses → switches to AA → AA shows paused state → user returns to phone → phone UI shows paused state
+- App is in background → system kills UI → user taps notification → UI recreates → shows correct state immediately
+
+None of these are handled by the framework. Each one is a deliberate decision in code.
+
+---
+
+
+### 5.1. Favorites — Multi-Surface State Synchronization
+
+> **Status: private testing — not yet in the Google Play release.**
+>
+> The favorites feature is implemented and functional, but it is currently in private testing. The reason is the synchronization complexity documented in this section and section 6.2 — five separate surfaces that must all agree on the same state, across a background service, system notification, Android Auto queue, Bluetooth media session, and two UI pages, with no built-in platform mechanism to coordinate them. What looks like a simple star button turned out to require a significant amount of careful engineering to get right on all surfaces. It may be included in a future public release once testing across more devices is complete.
+
+Favorites look simple from the outside: mark a station with a star, filter to show only favorites, navigate between them. The implementation turned out to be one of the more subtle synchronization problems in the app — touching five separate surfaces that all need to agree on the same state. This pattern applies to any MAUI app where a shared boolean state must be reflected across a background service, system notifications, and multiple UI pages simultaneously — and where the platform provides no built-in mechanism (like LiveData or ViewModel) to do it automatically.
+
+**The five surfaces that consume favorite state**
+
+| Surface | What it shows |
+|---|---|
+| Radio Page (player UI) | `★` indicator next to the station name when current station is a favorite; `☆/★` filter button to toggle favorites-only navigation |
+| Stations List tab | Per-station `★` toggle button — the only place where favorites are added or removed |
+| System notification popup | Station title prefixed with `★` when the currently playing station is a favorite |
+| Android Auto queue | Queue filtered to favorites-only when the filter is active; falls back to full list if no favorites exist |
+| Bluetooth / lockscreen media session | Title metadata prefixed with `★` |
+
+**The split of responsibilities — why it matters**
+
+The player UI star button is **filter-only** — it controls whether Prev and Next navigate only through favorite stations. It does **not** add or remove favorites. That action lives exclusively in the station list, where each station has its own toggle. This separation was a deliberate UX decision: conflating "filter" and "edit" into the same button on the player screen caused confusion about what the button actually did.
+
+The consequence: when the filter is ON, drag-and-drop reordering in the station list is disabled. Reordering while filtered would save stations in filtered order, destroying the positions of non-favorite stations.
+
+**Stale state problem**
+
+The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the persisted store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
+
+**Empty favorites fallback**
+
+When the filter is ON but no station is marked as a favorite, Prev/Next fall back silently to the full list. Without this fallback, enabling the filter with zero favorites would produce a dead end the user could not escape without turning the filter off.
+
+**Single source of truth**
+
+A shared `CurrentStationIsFavorite` flag is the signal between the UI, the service, and the notification layer. It is set fresh from the reloaded station list on every playback start and every queue rebuild. No surface reads favorite state directly from persistent storage at render time — they all read from the shared flag.
+
+**Filter state persistence**
+
+The filter toggle state is persisted so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker.
+
+---
+
+
+### 5.2. Android Auto + Favorites — Synchronization Problem and Solution
+
+Android Auto is the surface where the favorites filter was hardest to get right. Unlike the phone UI — where toggling the filter simply re-filters an in-memory list — AA has its own lifecycle and its own model for displaying and highlighting media content. Every surface involved (queue list, active item highlight, filter toggle) required a separate fix.
+
+**Why AA is different from Bluetooth and system notification**
+
+Bluetooth metadata and the system notification popup are push-only: the app sets the value once and the system renders it. If you call `SetMetadata()` or rebuild the notification, the change appears immediately.
+
+Android Auto is pull-based: AA requests the queue by calling `OnLoadChildren()`, and it requests the active item from `PlaybackState.activeQueueItemId`. The app cannot push content into AA directly — it can only tell AA that something changed and wait for AA to pull the new state. This distinction is what caused the symptoms: Bluetooth and the notification reflected favorites changes instantly, while AA remained stale because no one told it to re-request the queue.
+
+**Three bugs found and fixed**
+
+**Bug 1 — `OnLoadChildren` ignored the favorites filter**
+
+`OnLoadChildren` is called by AA when it opens or refreshes the station list. The original implementation always returned the full list of stations, regardless of whether the favorites filter was on. AA would show all stations even when the filter was active.
+
+Fix: `OnLoadChildren` now respects the filter state and returns only favorite stations when the filter is on. Fallback to the full list if the filter is on but no stations are favorited (same rule as the phone UI).
+
+**Bug 2 — active item highlight used the wrong index**
+
+AA highlights the currently playing row using an item ID from `PlaybackState`. The original code passed the station's position in the full list. When the favorites filter was on, the displayed queue had fewer items — AA could not find the full-list index in the shorter queue and showed no highlight at all.
+
+Fix: the active item ID is now always computed relative to the *displayed* (filtered or full) queue — not the full station list. It is recalculated in every place that builds the queue so it stays correct across navigation and filter changes.
+
+**Bug 3 — filter toggle did not notify AA to re-request the queue**
+
+When the user toggled the favorites filter, the phone UI re-filtered correctly. But AA was not told to call `OnLoadChildren` again. The result: AA kept showing the old queue until the user navigated away and back.
+
+Fix: every filter toggle and every favorites add/remove now sends a signal to the foreground service, which calls `NotifyChildrenChanged()`. AA receives this signal and re-requests the queue, now getting the correctly filtered list.
+
+**Scenario table**
+
+| Scenario | Before fix | After fix |
+|---|---|---|
+| Open AA with filter ON | Full list shown | Filtered list shown |
+| Toggle filter ON from player screen | AA still shows full list | AA refreshes and shows filtered list |
+| Toggle filter ON from station list | AA still shows full list | AA refreshes and shows filtered list |
+| Add a station to favorites while filter is ON | AA list does not update | AA refreshes and shows updated filtered list |
+| Remove a station from favorites while filter is ON | AA list does not update | AA refreshes, station disappears from list |
+| Play station, then toggle filter | Active highlight disappears or points to wrong row | Active highlight stays on the correct row |
+| Skip Next/Previous via AA while filter is ON | Active highlight shows wrong station | Active highlight moves to the correct next/previous station |
+| Tap a station in AA list while filter is ON | Correct station plays but wrong row highlighted | Correct station plays and correct row highlighted |
+| Filter ON but no favorites exist | AA shows empty queue | AA falls back to full list (same as phone UI) |
+
+---
+
+
+### 6. LibVLCSharp Memory Safety Checklist
+
+This checklist consolidates the native memory safety rules from sections 1 and 2 into a single quick-reference for code reviews and new contributors. Every rule here has a corresponding crash or deadlock in the project's history.
+
+**Threading rules — VLC event callbacks**
+
+| Rule | Why |
+|---|---|
+| Never call `Stop()`, `Play()`, or `Media = X` inside a VLC event handler | VLC holds native mutexes during event dispatch — re-entry deadlocks the engine permanently |
+| Always dispatch to thread pool first: `Task.Run(() => ...)` or `ThreadPool.QueueUserWorkItem` | Gets off the native pthread before any VLC call |
+| Never dispatch to UI thread as a substitute — call VLC from UI thread only if no VLC event is in progress | UI thread dispatch does not release the native mutex |
+| `Playing`, `Paused`, `Stopped` callbacks may run directly only if they make **no VLC calls** | State-read-only callbacks are safe; any VLC method call is not |
+
+**Native memory rules — Media object lifecycle**
+
+| Rule | Why |
+|---|---|
+| Cancel `_metaPollCts` before `Media = null` | Polling loop holds a reference to native media memory; cancelling stops access before free |
+| Detach `MetaChanged` event handler before `Media = null` | Event handler fired after free = SIGSEGV |
+| Null `_currentMediaForMeta` before `Media = null` | Prevents any deferred access via cached reference |
+| `Thread.Sleep(50)` after cancel, before free | LibVLC has a known native micro-freeze during teardown; 50ms lets the polling loop observe cancellation before native memory is released |
+| Call `oldMedia?.Dispose()` explicitly after `Media = null` | GC does not manage native memory — dispose must be explicit |
+| Never access `Media.Meta()` after `MediaPlayer.Media` has been replaced or nulled | The C# wrapper may be non-null while native memory is already freed |
+
+**Cleanup ordering — must be followed in every reset path**
+
+This sequence must be applied in `PlayRadio`, `StopRadio`, `HardResetVlc`, and `OnDestroy`:
+
+```
+1. _metaPollCts?.Cancel()                    ← stop polling
+2. _currentMediaForMeta.MetaChanged -= ...   ← detach handler
+3. _currentMediaForMeta = null               ← clear cached ref
+4. Thread.Sleep(50)                          ← wait for native teardown
+5. MediaPlayer.Stop()                        ← stop engine
+6. var old = MediaPlayer.Media
+7. MediaPlayer.Media = null                  ← free native memory
+8. old?.Dispose()                            ← explicit native dispose
+```
+
+**Play→Stop→Play race guard**
+
+| Rule | Why |
+|---|---|
+| Check `lock (_commandGate) { if (_isStartingPlayback) return; }` inside the `Stopped` callback | Late VLC `Stopped` events arrive after new playback has already started — without the guard they reset `IsPlaying = false` and corrupt new playback state |
+| Set `_isStartingPlayback = true` before `Play()`, clear it after the Playing event fires | Marks the window during which late Stopped events must be ignored |
+
+**Quick diagnostic — which crash pattern is which**
+
+| Symptom | Likely cause | Section |
+|---|---|---|
+| App freezes, no crash, no log, audio thread stuck | VLC deadlock — VLC method called inside event handler | §1 |
+| `SIGSEGV` in native LibVLC stack, intermittent | Use-after-free — Media accessed after `Media = null` | §2 |
+| `ForegroundServiceDidNotStartInTimeException` on Android 12 | `StartForeground()` not called immediately in `OnStartCommand` | §3 |
+| Play→Stop→Play: second Play shows stopped state | Late `Stopped` event — missing `_isStartingPlayback` guard | §2 |
+| Metadata shows stale station name after switch | `_currentMediaForMeta` not nulled before switch | §2 |
+
+---
+
+### 7. VLC Equalizer in .NET MAUI (LibVLCSharp)
 
 **Equalizer support in LibVLCSharp is functional but not fully documented.**
 Below is a practical guide for integrating and controlling the VLC equalizer in a .NET MAUI application.
@@ -760,144 +1118,8 @@ for (int i = 0; i < AudioEqualizer.BandCount; i++)
 
 ---
 
-### 6. AudioFocus and UI/Service State Synchronization
 
-This is one of the hardest problems in Android audio development in general — and significantly harder in .NET MAUI than in Kotlin, where the platform provides first-class tools for exactly this scenario.
-
-**The problem**
-
-A radio app does not live in isolation. Android is a multitasking system and audio focus is a shared resource. At any moment, another app or the system itself can interrupt playback: an incoming SMS triggers a notification sound, Android Auto navigation starts speaking turn-by-turn directions, the user opens YouTube or another media player, a phone call arrives. Each of these events sends an AudioFocus signal to the app. The app must react correctly — pause or duck the volume — and then know when and whether to resume.
-
-On top of that, the UI and the background service are separate components with separate lifecycles. The service runs continuously in the background. The UI can be destroyed and recreated at any time — the user switches to another app, the system kills the UI to reclaim memory, the screen rotates, the user taps the notification and returns to the app. Every time the UI comes back, it must reconnect to the service and restore the exact current state: which station is playing, whether it is paused, what the stream metadata shows. A stale or ghost UI state — showing "playing" when the service is paused, or the wrong station name — is a real bug that confuses users.
-
-In Kotlin this is solved with LiveData, ViewModel, and the Android lifecycle architecture components — all designed to survive UI recreation and bind automatically to the service state. In MAUI none of this exists. The framework abstracts the platform, which means it also abstracts away these tools. Everything has to be built manually.
-
-**AudioFocus handling — what must be covered**
-
-Android sends different AudioFocus events depending on what is happening, and each requires a different response:
-
-- `AUDIOFOCUS_LOSS` — another app has taken focus permanently (user started YouTube, a media player). The app must stop playback and not resume automatically. Resuming uninvited after the user chose another app is a serious UX violation.
-- `AUDIOFOCUS_LOSS_TRANSIENT` — focus lost temporarily (phone call, navigation announcement). The app must pause and resume automatically when focus returns.
-- `AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK` — another app needs audio briefly at low volume (notification sound). The app can reduce volume instead of pausing, then restore it.
-- `AUDIOFOCUS_GAIN` — focus returned. The app must resume if it was paused due to a transient loss, but must not resume if the user stopped playback manually or if focus was lost permanently.
-
-The critical distinction is between a user-initiated stop and a system-initiated pause. The reconnect logic and AudioFocus resume logic must never overlap — a user pressing Stop must always win, regardless of what AudioFocus signals arrive afterward.
-
-**UI/Service synchronization — what must be covered**
-
-When the UI is recreated or the user returns to the app, the following must all be restored correctly and instantly:
-
-- Current playback state (playing, paused, stopped, reconnecting)
-- Current station name and metadata (stream title, artist if available)
-- Correct visual state of all controls (play button, station name, status text)
-- Android Auto interface state — if the car head unit is connected, it has its own UI that must also reflect the current state
-
-The synchronization must work in all entry points: the user taps the app icon, the user taps the persistent notification, the user returns from Android Auto, the user returns from another app. Each of these can trigger UI recreation with a different back stack state.
-
-In MAUI the solution requires a shared state service (in this project `RadioStateService`) that acts as the single source of truth. The background service writes to it, the UI reads from it. The connection between the two must survive UI recreation without leaking memory or creating duplicate subscriptions. This means careful management of event subscriptions — subscribing when the page appears, unsubscribing when it disappears — and ensuring the state service itself is a singleton that outlives any individual page.
-
-**Why this took a long time**
-
-The interactions between AudioFocus events, reconnect logic, user-initiated stops, and UI lifecycle are a matrix of edge cases. Each combination has to behave correctly:
-
-- User stops → navigation speaks → AudioFocus gain arrives → app must not resume
-- Stream drops → reconnect starts → phone call arrives → reconnect must pause → call ends → reconnect resumes
-- User pauses → switches to AA → AA shows paused state → user returns to phone → phone UI shows paused state
-- App is in background → system kills UI → user taps notification → UI recreates → shows correct state immediately
-
-None of these are handled by the framework. Each one is a deliberate decision in code.
-
----
-
-### 6.1. Favorites — Multi-Surface State Synchronization
-
-> **Status: private testing — not yet in the Google Play release.**
->
-> The favorites feature is implemented and functional, but it is currently in private testing. The reason is the synchronization complexity documented in this section and section 6.2 — five separate surfaces that must all agree on the same state, across a background service, system notification, Android Auto queue, Bluetooth media session, and two UI pages, with no built-in platform mechanism to coordinate them. What looks like a simple star button turned out to require a significant amount of careful engineering to get right on all surfaces. It may be included in a future public release once testing across more devices is complete.
-
-Favorites look simple from the outside: mark a station with a star, filter to show only favorites, navigate between them. The implementation turned out to be one of the more subtle synchronization problems in the app — touching five separate surfaces that all need to agree on the same state. This pattern applies to any MAUI app where a shared boolean state must be reflected across a background service, system notifications, and multiple UI pages simultaneously — and where the platform provides no built-in mechanism (like LiveData or ViewModel) to do it automatically.
-
-**The five surfaces that consume favorite state**
-
-| Surface | What it shows |
-|---|---|
-| Radio Page (player UI) | `★` indicator next to the station name when current station is a favorite; `☆/★` filter button to toggle favorites-only navigation |
-| Stations List tab | Per-station `★` toggle button — the only place where favorites are added or removed |
-| System notification popup | Station title prefixed with `★` when the currently playing station is a favorite |
-| Android Auto queue | Queue filtered to favorites-only when the filter is active; falls back to full list if no favorites exist |
-| Bluetooth / lockscreen media session | Title metadata prefixed with `★` |
-
-**The split of responsibilities — why it matters**
-
-The player UI star button is **filter-only** — it controls whether Prev and Next navigate only through favorite stations. It does **not** add or remove favorites. That action lives exclusively in the station list, where each station has its own toggle. This separation was a deliberate UX decision: conflating "filter" and "edit" into the same button on the player screen caused confusion about what the button actually did.
-
-The consequence: when the filter is ON, drag-and-drop reordering in the station list is disabled. Reordering while filtered would save stations in filtered order, destroying the positions of non-favorite stations.
-
-**Stale state problem**
-
-The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the persisted store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
-
-**Empty favorites fallback**
-
-When the filter is ON but no station is marked as a favorite, Prev/Next fall back silently to the full list. Without this fallback, enabling the filter with zero favorites would produce a dead end the user could not escape without turning the filter off.
-
-**Single source of truth**
-
-A shared `CurrentStationIsFavorite` flag is the signal between the UI, the service, and the notification layer. It is set fresh from the reloaded station list on every playback start and every queue rebuild. No surface reads favorite state directly from persistent storage at render time — they all read from the shared flag.
-
-**Filter state persistence**
-
-The filter toggle state is persisted so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker.
-
----
-
-### 6.2. Android Auto + Favorites — Synchronization Problem and Solution
-
-Android Auto is the surface where the favorites filter was hardest to get right. Unlike the phone UI — where toggling the filter simply re-filters an in-memory list — AA has its own lifecycle and its own model for displaying and highlighting media content. Every surface involved (queue list, active item highlight, filter toggle) required a separate fix.
-
-**Why AA is different from Bluetooth and system notification**
-
-Bluetooth metadata and the system notification popup are push-only: the app sets the value once and the system renders it. If you call `SetMetadata()` or rebuild the notification, the change appears immediately.
-
-Android Auto is pull-based: AA requests the queue by calling `OnLoadChildren()`, and it requests the active item from `PlaybackState.activeQueueItemId`. The app cannot push content into AA directly — it can only tell AA that something changed and wait for AA to pull the new state. This distinction is what caused the symptoms: Bluetooth and the notification reflected favorites changes instantly, while AA remained stale because no one told it to re-request the queue.
-
-**Three bugs found and fixed**
-
-**Bug 1 — `OnLoadChildren` ignored the favorites filter**
-
-`OnLoadChildren` is called by AA when it opens or refreshes the station list. The original implementation always returned the full list of stations, regardless of whether the favorites filter was on. AA would show all stations even when the filter was active.
-
-Fix: `OnLoadChildren` now respects the filter state and returns only favorite stations when the filter is on. Fallback to the full list if the filter is on but no stations are favorited (same rule as the phone UI).
-
-**Bug 2 — active item highlight used the wrong index**
-
-AA highlights the currently playing row using an item ID from `PlaybackState`. The original code passed the station's position in the full list. When the favorites filter was on, the displayed queue had fewer items — AA could not find the full-list index in the shorter queue and showed no highlight at all.
-
-Fix: the active item ID is now always computed relative to the *displayed* (filtered or full) queue — not the full station list. It is recalculated in every place that builds the queue so it stays correct across navigation and filter changes.
-
-**Bug 3 — filter toggle did not notify AA to re-request the queue**
-
-When the user toggled the favorites filter, the phone UI re-filtered correctly. But AA was not told to call `OnLoadChildren` again. The result: AA kept showing the old queue until the user navigated away and back.
-
-Fix: every filter toggle and every favorites add/remove now sends a signal to the foreground service, which calls `NotifyChildrenChanged()`. AA receives this signal and re-requests the queue, now getting the correctly filtered list.
-
-**Scenario table**
-
-| Scenario | Before fix | After fix |
-|---|---|---|
-| Open AA with filter ON | Full list shown | Filtered list shown |
-| Toggle filter ON from player screen | AA still shows full list | AA refreshes and shows filtered list |
-| Toggle filter ON from station list | AA still shows full list | AA refreshes and shows filtered list |
-| Add a station to favorites while filter is ON | AA list does not update | AA refreshes and shows updated filtered list |
-| Remove a station from favorites while filter is ON | AA list does not update | AA refreshes, station disappears from list |
-| Play station, then toggle filter | Active highlight disappears or points to wrong row | Active highlight stays on the correct row |
-| Skip Next/Previous via AA while filter is ON | Active highlight shows wrong station | Active highlight moves to the correct next/previous station |
-| Tap a station in AA list while filter is ON | Correct station plays but wrong row highlighted | Correct station plays and correct row highlighted |
-| Filter ON but no favorites exist | AA shows empty queue | AA falls back to full list (same as phone UI) |
-
----
-
-### 7. AAOS Album Art
+### 8. AAOS Album Art
 
 **The symptom**
 
@@ -1014,7 +1236,8 @@ var builder = new Notification.Builder(this, channelId)
 
 ---
 
-### 8. Google Play AAOS Distribution — Why the APK Works but the Store Rejects It
+
+### 9. Google Play AAOS Distribution — Why the APK Works but the Store Rejects It
 
 **The situation**
 
@@ -1235,7 +1458,8 @@ The requirements listed in this section were discovered through that process —
 
 ---
 
-### 9. Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)
+
+### 10. Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)
 
 Meeting all the technical requirements documented in section 8 above — the descriptor file, the manifest declarations, the correct `MediaBrowserService` binding, the AAB format, the URI-based album art — is necessary but not sufficient for passing Google Play's AAOS certification.
 
@@ -1284,61 +1508,6 @@ A workaround would require either a server-side station catalog (turning the app
 
 ---
 
-### 10. LibVLCSharp Memory Safety Checklist
-
-This checklist consolidates the native memory safety rules from sections 1 and 2 into a single quick-reference for code reviews and new contributors. Every rule here has a corresponding crash or deadlock in the project's history.
-
-**Threading rules — VLC event callbacks**
-
-| Rule | Why |
-|---|---|
-| Never call `Stop()`, `Play()`, or `Media = X` inside a VLC event handler | VLC holds native mutexes during event dispatch — re-entry deadlocks the engine permanently |
-| Always dispatch to thread pool first: `Task.Run(() => ...)` or `ThreadPool.QueueUserWorkItem` | Gets off the native pthread before any VLC call |
-| Never dispatch to UI thread as a substitute — call VLC from UI thread only if no VLC event is in progress | UI thread dispatch does not release the native mutex |
-| `Playing`, `Paused`, `Stopped` callbacks may run directly only if they make **no VLC calls** | State-read-only callbacks are safe; any VLC method call is not |
-
-**Native memory rules — Media object lifecycle**
-
-| Rule | Why |
-|---|---|
-| Cancel `_metaPollCts` before `Media = null` | Polling loop holds a reference to native media memory; cancelling stops access before free |
-| Detach `MetaChanged` event handler before `Media = null` | Event handler fired after free = SIGSEGV |
-| Null `_currentMediaForMeta` before `Media = null` | Prevents any deferred access via cached reference |
-| `Thread.Sleep(50)` after cancel, before free | LibVLC has a known native micro-freeze during teardown; 50ms lets the polling loop observe cancellation before native memory is released |
-| Call `oldMedia?.Dispose()` explicitly after `Media = null` | GC does not manage native memory — dispose must be explicit |
-| Never access `Media.Meta()` after `MediaPlayer.Media` has been replaced or nulled | The C# wrapper may be non-null while native memory is already freed |
-
-**Cleanup ordering — must be followed in every reset path**
-
-This sequence must be applied in `PlayRadio`, `StopRadio`, `HardResetVlc`, and `OnDestroy`:
-
-```
-1. _metaPollCts?.Cancel()                    ← stop polling
-2. _currentMediaForMeta.MetaChanged -= ...   ← detach handler
-3. _currentMediaForMeta = null               ← clear cached ref
-4. Thread.Sleep(50)                          ← wait for native teardown
-5. MediaPlayer.Stop()                        ← stop engine
-6. var old = MediaPlayer.Media
-7. MediaPlayer.Media = null                  ← free native memory
-8. old?.Dispose()                            ← explicit native dispose
-```
-
-**Play→Stop→Play race guard**
-
-| Rule | Why |
-|---|---|
-| Check `lock (_commandGate) { if (_isStartingPlayback) return; }` inside the `Stopped` callback | Late VLC `Stopped` events arrive after new playback has already started — without the guard they reset `IsPlaying = false` and corrupt new playback state |
-| Set `_isStartingPlayback = true` before `Play()`, clear it after the Playing event fires | Marks the window during which late Stopped events must be ignored |
-
-**Quick diagnostic — which crash pattern is which**
-
-| Symptom | Likely cause | Section |
-|---|---|---|
-| App freezes, no crash, no log, audio thread stuck | VLC deadlock — VLC method called inside event handler | §1 |
-| `SIGSEGV` in native LibVLC stack, intermittent | Use-after-free — Media accessed after `Media = null` | §2 |
-| `ForegroundServiceDidNotStartInTimeException` on Android 12 | `StartForeground()` not called immediately in `OnStartCommand` | §3 |
-| Play→Stop→Play: second Play shows stopped state | Late `Stopped` event — missing `_isStartingPlayback` guard | §2 |
-| Metadata shows stale station name after switch | `_currentMediaForMeta` not nulled before switch | §2 |
 
 ---
 
@@ -1474,31 +1643,7 @@ Separating playback logic, reconnect logic, media session callbacks, queue manag
 
 ---
 
-## 🛠 Development Environment
-
-The app was built entirely in **Visual Studio 2026** using the latest Microsoft frameworks available at the time of development. This setup is sufficient for building, running, and testing this kind of app.
-
-**Building and basic testing:**
-Visual Studio 2026 with the .NET MAUI workload covers everything needed — building, deploying to physical devices, and running on the built-in Android emulator for phones and tablets.
-
-**Extended platform testing:**
-Some targets are not available in Visual Studio's built-in emulator and require **Android Studio**:
-
-- **Android Auto** — tested using the Android Auto Desktop Head Unit (DHU) emulator, available only through Android Studio's SDK tools
-- **Android Desktop / ChromeOS** — tested using the large-screen Android emulator in Android Studio
-- **Android Automotive OS** — tested using the AAOS emulator (AVD Manager in Android Studio), which simulates a car with a built-in Android system and no phone
-
-Physical devices tested: Android phones, Android TV boxes (used as dedicated in-car players), Bluetooth speakers and car head units.
-
-Between Visual Studio 2026 for development and Android Studio for extended emulator targets, the full platform matrix is covered. No other tooling is required.
-
 ---
-
-## 📱 Requirements
-
-- **Android 8–16 (API 26–35)** — supported range
-- .NET 10
-- Internet connection (Wi-Fi, 4G, 5G)
 
 ## 📦 Key Dependencies
 
@@ -1548,6 +1693,38 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 <PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
 ```
 
+
+---
+
+---
+
+## 🛠 Development Environment
+
+The app was built entirely in **Visual Studio 2026** using the latest Microsoft frameworks available at the time of development. This setup is sufficient for building, running, and testing this kind of app.
+
+**Building and basic testing:**
+Visual Studio 2026 with the .NET MAUI workload covers everything needed — building, deploying to physical devices, and running on the built-in Android emulator for phones and tablets.
+
+**Extended platform testing:**
+Some targets are not available in Visual Studio's built-in emulator and require **Android Studio**:
+
+- **Android Auto** — tested using the Android Auto Desktop Head Unit (DHU) emulator, available only through Android Studio's SDK tools
+- **Android Desktop / ChromeOS** — tested using the large-screen Android emulator in Android Studio
+- **Android Automotive OS** — tested using the AAOS emulator (AVD Manager in Android Studio), which simulates a car with a built-in Android system and no phone
+
+Physical devices tested: Android phones, Android TV boxes (used as dedicated in-car players), Bluetooth speakers and car head units.
+
+Between Visual Studio 2026 for development and Android Studio for extended emulator targets, the full platform matrix is covered. No other tooling is required.
+
+---
+
+---
+
+## 📱 Requirements
+
+- **Android 8–16 (API 26–35)** — supported range
+- .NET 10
+- Internet connection (Wi-Fi, 4G, 5G)
 
 ---
 
