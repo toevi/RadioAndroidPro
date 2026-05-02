@@ -32,27 +32,27 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 ## Table of Contents
 
-- Why .NET MAUI — Not Kotlin, Not Gradle
-- Stream Stability — The Hard Problem
+- [Why .NET MAUI — Not Kotlin, Not Gradle](#️⃣-why-net-maui--not-kotlin-not-gradle)
+- [Stream Stability — The Hard Problem](#-stream-stability--the-hard-problem)
 - Technical Deep Dives
-  - 1. LibVLC Native Thread Deadlock
-  - 2. SIGSEGV from LibVLCSharp Native Memory
-  - 3. Foreground Service Crash on Android 12 / 12.1
-  - 3.1. Station Edit, Add, Delete — Service Must Be Stopped First
-  - 4. MediaBrowserServiceCompat and Android Auto
-  - 5. AudioFocus and UI/Service State Synchronization
-  - 5.1. Favorites — Multi-Surface State Synchronization
-  - 5.2. Android Auto + Favorites — Synchronization Problem and Solution
-  - 6. LibVLCSharp Memory Safety Checklist
-  - 7. VLC Equalizer in .NET MAUI (LibVLCSharp)
-  - 8. AAOS Album Art: Bitmap vs URI
-  - 9. Google Play AAOS Distribution
-  - 10. Android Automotive OS — Why the Port Was Abandoned
-- System Architecture & Protection Layers
-- Key Dependencies
-- Development Environment
-- Requirements
-- License & Author
+  - [1. LibVLC Native Thread Deadlock](#1-libvlc-native-thread-deadlock)
+  - [2. SIGSEGV from LibVLCSharp Native Memory](#2-sigsegv-from-libvlcsharp-native-memory)
+  - [3. Foreground Service Crash on Android 12 / 12.1](#3-foreground-service-crash-on-android-12--121)
+  - [3.1. Station Edit, Add, Delete — Service Must Be Stopped First](#31-station-edit-add-delete--service-must-be-stopped-first)
+  - [4. MediaBrowserServiceCompat and Android Auto](#4-mediabrowserservicecompat-and-android-auto)
+  - [5. AudioFocus and UI/Service State Synchronization](#5-audiofocus-and-uiservice-state-synchronization)
+  - [5.1. Favorites — Multi-Surface State Synchronization](#51-favorites--multi-surface-state-synchronization)
+  - [5.2. Android Auto + Favorites — Synchronization Problem and Solution](#52-android-auto--favorites--synchronization-problem-and-solution)
+  - [6. LibVLCSharp Memory Safety Checklist](#6-libvlcsharp-memory-safety-checklist)
+  - [7. VLC Equalizer in .NET MAUI (LibVLCSharp)](#7-vlc-equalizer-in-net-maui-libvlcsharp)
+  - [8. AAOS Album Art: Bitmap vs URI](#8-aaos-album-art-bitmap-vs-uri)
+  - [9. Google Play AAOS Distribution](#9-google-play-aaos-distribution--why-the-apk-works-but-the-store-rejects-it)
+  - [10. Android Automotive OS — Why the Port Was Abandoned](#10-android-automotive-os--why-the-port-was-abandoned)
+- [System Architecture & Protection Layers](#-architecture)
+- [Key Dependencies](#-key-dependencies)
+- [Development Environment](#️-development-environment)
+- [Requirements](#-requirements)
+- [License & Author](#-author)
 
 ---
 
@@ -68,7 +68,7 @@ That is the real technical challenge — and the reason stream stability require
 
 | Platform | Notes |
 |---|---|
-| 📱 Android phones & tablets | Android 8–16 (API 26–35) |
+| 📱 Android phones & tablets | Android 8–16 (API 26–36) |
 | 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
@@ -1381,7 +1381,7 @@ In `.csproj`:
 <PropertyGroup>
     <ApplicationId>com.yourpackage.radioandroid</ApplicationId>
     <SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
-    <TargetSdkVersion>35</TargetSdkVersion>
+    <TargetSdkVersion>36</TargetSdkVersion>
 </PropertyGroup>
 ```
 
@@ -1722,7 +1722,7 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 
 ## 📱 Requirements
 
-- **Android 8–16 (API 26–35)** — supported range
+- **Android 8–16 (API 26–36)** — supported range
 - .NET 10
 - Internet connection (Wi-Fi, 4G, 5G)
 
