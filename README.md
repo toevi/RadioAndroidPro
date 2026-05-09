@@ -48,6 +48,7 @@ This README is not a feature list. It is a technical account of what went wrong 
   - [8. AAOS Album Art: Bitmap vs URI](#8-aaos-album-art-bitmap-vs-uri)
   - [9. Google Play AAOS Distribution](#9-google-play-aaos-distribution--why-the-apk-works-but-the-store-rejects-it)
   - [10. Android Automotive OS — Why the Port Was Abandoned](#10-android-automotive-os--why-the-port-was-abandoned)
+  - [11. Google Play In-App Purchases — One-Time Payment in .NET 10](#11-google-play-in-app-purchases--one-time-payment-in-net-10)
 - [System Architecture & Protection Layers](#-architecture)
 - [Key Dependencies](#-key-dependencies)
 - [Development Environment](#️-development-environment)
@@ -611,15 +612,15 @@ private void StopForegroundCompat()
 
 ### 3.1. Station Edit, Add, Delete — Service Must Be Stopped First
 
-> **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a flat JSON file used as the station store.
+> **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a flat JSON file used as the station store. All station data is stored in JSON — one file, no schema, no migrations — read once at startup and not watched for runtime changes.
 
 **Why JSON, not a database**
 
-The station list is stored as a plain JSON file — one file, no schema, no migrations, no extra libraries. This was a deliberate design choice: the file is small, human-readable, directly editable, and trivially serialized with the built-in .NET JSON APIs. There is no SQLite dependency, no ORM, no database engine to initialize or version. For a list of internet radio URLs, a database would add complexity without adding value. The trade-off is that the file is read once at startup — it is not watched for changes at runtime. That constraint is what makes the rule below necessary.
+Station data is stored as a plain JSON file — one file, no schema, no migrations, no extra libraries. This was a deliberate design choice: the file is small, human-readable, directly editable, and trivially serialized with the built-in .NET JSON APIs. There is no SQLite dependency, no ORM, no database engine to initialize or version. For a list of internet radio URLs, a database would add complexity without adding value. The trade-off is that the file is read once at startup — it is not watched for changes at runtime. That constraint is what makes the rule below necessary.
 
 **The symptom**
 
-If you add, edit, or delete a station while the service is running and a stream is playing, the change is written to `stacje.json` on disk — but the service is unaware of it. The service holds its own in-memory copy of the URL it received when playback started. That URL is also held inside the native LibVLC media player instance.
+If you add, edit, or delete a station while the service is running and a stream is playing, the change is written to the station data file on disk — but the service is unaware of it. The service holds its own in-memory copy of the URL it received when playback started. That URL is also held inside the native LibVLC media player instance.
 
 The most visible case: deleting a station that is currently playing. After deletion the station no longer exists in the list or on disk, but VLC continues playing it from the URL it already has in memory. The stream does not stop. The station is gone from the UI but still audible. This was verified on a real device — the deleted station kept playing until the service was manually stopped.
 
@@ -631,7 +632,7 @@ The Android foreground service is a separate component with its own lifecycle. O
 2. The `title` string passed via `Intent` extras at startup
 3. The `MediaSession` metadata built from that title and URL
 
-None of these are updated when `stacje.json` changes on disk. The service does not watch the file. It has no observer, no reload trigger, no notification mechanism. It only reads new data when a new `Intent` arrives with a new URL.
+None of these are updated when the station data file changes on disk. The service does not watch the file. It has no observer, no reload trigger, no notification mechanism. It only reads new data when a new `Intent` arrives with a new URL.
 
 **The rule**
 
@@ -721,7 +722,7 @@ public override void OnLoadChildren(string parentId, Result result)
     if (parentId == "__ROOT__")
     {
         // ✅ Root: one browsable folder — always visible regardless of page size
-        var iconUri = Android.Net.Uri.Parse($"android.resource://{PackageName}/drawable/radio1");
+        var iconUri = Android.Net.Uri.Parse($"android.resource://{PackageName}/drawable/app_icon");
         var categoryDesc = new MediaDescriptionCompat.Builder()
             .SetMediaId(BrowseIdAllStations)
             .SetTitle("All Stations")
@@ -917,21 +918,19 @@ None of these are handled by the framework. Each one is a deliberate decision in
 
 ### 5.1. Favorites — Multi-Surface State Synchronization
 
-> **Status: private testing — not yet in the Google Play release.**
->
-> The favorites feature is implemented and functional, but it is currently in private testing. The reason is the synchronization complexity documented in this section and section 6.2 — five separate surfaces that must all agree on the same state, across a background service, system notification, Android Auto queue, Bluetooth media session, and two UI pages, with no built-in platform mechanism to coordinate them. What looks like a simple star button turned out to require a significant amount of careful engineering to get right on all surfaces. It may be included in a future public release once testing across more devices is complete.
+> **Note:** Favorites are implemented and fully working in the current test version. A freemium release offering this feature as a paid upgrade is planned for the future. The synchronization complexity described here — five separate surfaces that must all agree on the same state — is the primary reason this feature required dedicated engineering rather than a simple star toggle.
 
-Favorites look simple from the outside: mark a station with a star, filter to show only favorites, navigate between them. The implementation turned out to be one of the more subtle synchronization problems in the app — touching five separate surfaces that all need to agree on the same state. This pattern applies to any MAUI app where a shared boolean state must be reflected across a background service, system notifications, and multiple UI pages simultaneously — and where the platform provides no built-in mechanism (like LiveData or ViewModel) to do it automatically.
+Favorites look simple from the outside
 
 **The five surfaces that consume favorite state**
 
 | Surface | What it shows |
 |---|---|
-| Radio Page (player UI) | `★` indicator next to the station name when current station is a favorite; `☆/★` filter button to toggle favorites-only navigation |
-| Stations List tab | Per-station `★` toggle button — the only place where favorites are added or removed |
+| Radio Page (player UI) | `★` indicator next to the station name when current station is a favorite |
+| Stations List tab | Per-station `★` toggle button — the only place where favorites are added or removed; a separate toolbar `★` button filters navigation to favorites-only |
 | System notification popup | Station title prefixed with `★` when the currently playing station is a favorite |
-| Android Auto queue | Queue filtered to favorites-only when the filter is active; falls back to full list if no favorites exist |
-| Bluetooth / lockscreen media session | Title metadata prefixed with `★` |
+| Android Auto queue | Queue filtered to favorites-only when the filter is active; reloads the station list from JSON storage before every queue rebuild; falls back to full list if no favorites exist; calls `NotifyChildrenChanged()` on every favorite toggle so AA re-requests the queue |
+| Bluetooth / lockscreen media session | Title metadata prefixed with `★`; updated via `SetMetadata()` every time the playback service starts a new station or the favorite state changes |
 
 **The split of responsibilities — why it matters**
 
@@ -941,7 +940,7 @@ The consequence: when the filter is ON, drag-and-drop reordering in the station 
 
 **Stale state problem**
 
-The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the persisted store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
+The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the JSON store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
 
 **Empty favorites fallback**
 
@@ -953,7 +952,7 @@ A shared `CurrentStationIsFavorite` flag is the signal between the UI, the servi
 
 **Filter state persistence**
 
-The filter toggle state is persisted so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker.
+The filter toggle state is persisted in JSON-backed settings so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker. The favorite flag itself is part of each station record in the JSON station store — no separate favorites database.
 
 ---
 
@@ -1112,7 +1111,7 @@ for (int i = 0; i < AudioEqualizer.BandCount; i++)
 }
 ```
 
-**Tip:** Integrate equalizer controls in `EditStationPage.xaml` or a dedicated settings page for user adjustment.
+**Tip:** Equalizer settings are saved automatically when the app exits and restored on the next launch. EQ profiles can also be exported and imported as JSON files — this feature is implemented and working in the current test version. A freemium release offering EQ profile save/load as a paid upgrade is planned for the future.
 
 **Reference:** [LibVLCSharp AudioEqualizer API](https://code.videolan.org/videolan/LibVLCSharp/-/blob/master/LibVLCSharp/AudioEqualizer.cs)
 
@@ -1137,7 +1136,7 @@ This is not documented in a single clear place. The Android developer docs menti
 
 ```csharp
 // ❌ Bitmap-only — BT and AA display it, AAOS ignores it
-var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.radio1);
+var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.app_icon);
 var metadata = new MediaMetadataCompat.Builder()
     .PutString(MediaMetadataCompat.MetadataKeyTitle, stationName)
     .PutString(MediaMetadataCompat.MetadataKeyArtist, artist)
@@ -1152,8 +1151,8 @@ Set both Bitmap (for BT/AA) and URI (for AAOS). The URI must use the `android.re
 
 ```csharp
 // ✅ Bitmap + URI — covers all three platforms
-var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.radio1);
-var artUri = $"android.resource://{PackageName}/drawable/radio1";
+var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.app_icon);
+var artUri = $"android.resource://{PackageName}/drawable/app_icon";
 
 var metadata = new MediaMetadataCompat.Builder()
     .PutString(MediaMetadataCompat.MetadataKeyTitle, stationName)
@@ -1176,7 +1175,7 @@ There are two `android.resource://` URI formats:
 | Format | Example | AAOS |
 |---|---|---|
 | Integer resource ID | `android.resource://com.myapp/2131230856` | ❌ Some AAOS builds fail to resolve this |
-| Type/name | `android.resource://com.myapp/drawable/radio1` | ✅ Works reliably across AAOS builds |
+| Type/name | `android.resource://com.myapp/drawable/app_icon` | ✅ Works reliably across AAOS builds |
 
 Always use the `type/name` format. The integer format is technically valid but has been observed to fail on certain AAOS emulator builds and real car head units.
 
@@ -1186,7 +1185,7 @@ The MediaSession metadata fix covers the "now playing" screen. But AAOS also dis
 
 ```csharp
 // Browse tree items (OnLoadChildren → CreateStation)
-var iconUri = $"android.resource://{PackageName}/drawable/radio1";
+var iconUri = $"android.resource://{PackageName}/drawable/app_icon";
 var metadata = new MediaMetadataCompat.Builder()
     .PutString(MediaMetadataCompat.MetadataKeyMediaId, id)
     .PutString(MediaMetadataCompat.MetadataKeyTitle, name)
@@ -1200,7 +1199,7 @@ return new MediaBrowserCompat.MediaItem(
 
 // Queue items (BuildQueueItems)
 var iconAndroidUri = Android.Net.Uri.Parse(
-    $"android.resource://{PackageName}/drawable/radio1");
+    $"android.resource://{PackageName}/drawable/app_icon");
 var desc = new MediaDescriptionCompat.Builder()
     .SetMediaId(mediaId)
     .SetTitle(stationName)
@@ -1379,7 +1378,6 @@ In `.csproj`:
 
 ```xml
 <PropertyGroup>
-    <ApplicationId>com.yourpackage.radioandroid</ApplicationId>
     <SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
     <TargetSdkVersion>36</TargetSdkVersion>
 </PropertyGroup>
@@ -1511,6 +1509,104 @@ A workaround would require either a server-side station catalog (turning the app
 
 ---
 
+### 11. Google Play In-App Purchases — One-Time Payment in .NET 10
+
+**Google Play Billing in .NET 10 — the library situation**
+
+Implementing Google Play Billing in a .NET MAUI app is not straightforward. The official Google Play Billing Library is a Java/Kotlin library. In a native Android project it is added as a Gradle dependency and used directly. In .NET MAUI there is no official NuGet wrapper.
+
+**The available options in .NET 10:**
+
+| Approach | Status |
+|---|---|
+| Official Google Play Billing Library (Java/Kotlin) | No official C# bindings |
+| `Xamarin.Google.Android.Play.Billing` | Available on NuGet — community-maintained Xamarin bindings |
+| `Plugin.InAppBilling` | Popular MAUI/Xamarin plugin — wraps the billing library for C# |
+| Direct JNI calls | Possible but fragile and maintenance-intensive |
+
+This project uses **`Plugin.InAppBilling`** — the most practical option for .NET MAUI. It wraps the Google Play Billing Library with a clean C# async API and handles the connection lifecycle, purchase verification flow, and acknowledgement that the native library requires.
+
+```xml
+<PackageReference Include="Plugin.InAppBilling" Version="7.1.1" />
+```
+
+---
+
+**The dependency problem — AndroidX conflict**
+
+Adding `Plugin.InAppBilling` introduced a build conflict. The plugin has transitive dependencies on `Xamarin.Google.Android.Play.Billing` and several AndroidX packages. These conflicted with the AndroidX Lifecycle packages already pinned for `Xamarin.AndroidX.Media` (Android Auto support).
+
+The symptom was a familiar one: `Duplicate class` errors at build time — the same classes appearing from two different NuGet packages at two different versions. In a Gradle project this is resolved automatically by the dependency resolver. In NuGet it requires explicit pins.
+
+The fix was to extend the existing Lifecycle pinning block with the additional packages that `Plugin.InAppBilling` pulled in transitively:
+
+```xml
+<!-- Billing library -->
+<PackageReference Include="Plugin.InAppBilling" Version="7.1.1" />
+
+<!-- Extended AndroidX pins to resolve conflicts introduced by billing -->
+<PackageReference Include="Xamarin.Google.Android.Play.Billing" Version="7.1.1" />
+<PackageReference Include="Xamarin.AndroidX.Activity" Version="1.10.1.1" />
+<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.10.1.1" />
+<PackageReference Include="Xamarin.AndroidX.Fragment" Version="1.8.7.1" />
+<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.8.7.1" />
+```
+
+The general rule: every time a new Android-targeting NuGet package is added to a .NET MAUI project that already has AndroidX pinning, check for new transitive conflicts immediately. The build error is always the same (`Duplicate class`), and the fix is always the same (explicit pin at the version the new package needs).
+
+---
+
+**How the billing flow works**
+
+The purchase flow uses the `Plugin.InAppBilling` async API and runs on the Android main thread (required by Google Play Billing):
+
+```csharp
+// Check if already purchased (on app start)
+var billing = CrossInAppBilling.Current;
+await billing.ConnectAsync();
+var purchases = await billing.GetPurchasesAsync(ItemType.InAppPurchase);
+bool isPro = purchases?.Any(p =>
+    p.ProductId == "your_product_id" &&
+    p.State == PurchaseState.Purchased) ?? false;
+await billing.DisconnectAsync();
+
+// Initiate purchase
+await billing.ConnectAsync();
+var purchase = await billing.PurchaseAsync("your_product_id", ItemType.InAppPurchase);
+if (purchase?.State == PurchaseState.Purchased)
+{
+    // Acknowledge the purchase — required, or Google will refund after 3 days
+    await billing.FinalizePurchaseAsync(purchase.PurchaseToken);
+    // Unlock features
+}
+await billing.DisconnectAsync();
+```
+
+**Key rules for Google Play Billing in .NET MAUI:**
+
+| Rule | Why |
+|---|---|
+| Always call `ConnectAsync()` before any billing operation | The billing library requires an active connection to the Play Store service |
+| Always call `DisconnectAsync()` when done | Leaving the connection open drains battery and may cause ANR on app exit |
+| Acknowledge every purchase with `FinalizePurchaseAsync()` | Unacknowledged purchases are automatically refunded by Google after 72 hours |
+| Restore purchases on every app start | The user may reinstall, change device, or clear app data — purchases are tied to the Google account, not the device |
+| Handle `BillingException` — do not let it crash the app | Network issues, Play Store unavailable, and user cancellation all surface as exceptions |
+| Never grant features before acknowledgement | Only grant access after the purchase state is `Purchased` and the token is acknowledged |
+
+---
+
+**Purchase verification — server-side vs client-side**
+
+`Plugin.InAppBilling` returns a purchase token that can be verified against the Google Play Developer API server-side. For a single-developer app without a backend, client-side verification is practical:
+
+- The purchase state is `Purchased` (not `Pending`)
+- The token is acknowledged within 72 hours
+- The product ID matches the expected SKU
+
+For a production app with a server: send the token to your backend, verify it against the Google Play Developer API, and only grant features after the backend confirms the purchase is valid and not previously used. Client-side verification is acceptable for low-fraud-risk features; server-side is required for anything with real monetary value or where replay attacks matter.
+
+---
+
 ## 🏗 Architecture
 
 ### System Layers
@@ -1580,14 +1676,19 @@ RadioAndroid/
 │   │   ├── StacjePage.xaml.cs      — Station list logic (add/remove favorites, reorder, drag-drop)
 │   │   ├── EditStacjaPage.xaml     — Single station edit form (name + URL)
 │   │   ├── EditStacjaPage.xaml.cs  — Single station edit logic (Save / Delete)
-│   │   ├── EditStationPage.xaml    — Playlist Save/Load (JSON + PLS) + 9-band EQ
-│   │   ├── EditStationPage.xaml.cs — Playlist and EQ logic
+│   │   ├── EditStationPage.xaml    — 9-band equalizer (sliders, reset, save/load EQ profiles as JSON)
+│   │   ├── EditStationPage.xaml.cs — EQ logic (profile save/load, apply to player)
+│   │   ├── ExportImportPLSPage.xaml    — Playlist import/export page (JSON + PLS format)
+│   │   ├── ExportImportPLSPage.xaml.cs — Playlist import/export logic
+│   │   ├── PremiumPopup.xaml       — PRO purchase popup (CommunityToolkit Popup)
+│   │   ├── PremiumPopup.xaml.cs    — PRO purchase popup logic
 │   │   ├── HelpPage.xaml           — User guide
 │   │   └── HelpPage.xaml.cs        — User guide logic
 │   ├── Services/
 │   │   ├── RadioStateService.cs    — Shared playback/favorites state (INotifyPropertyChanged)
 │   │   ├── StacjaService.cs        — Station selection event bridge (UI → service)
-│   │   └── SettingsService.cs      — Persisted user settings (JSON-backed)
+│   │   ├── SettingsService.cs      — Persisted user settings (JSON-backed)
+│   │   └── PremiumService.cs       — PRO purchase state (Plugin.InAppBilling wrapper, restore on start)
 │   ├── Models/
 │   │   ├── Stacja.cs               — Station model (name + URL + IsFavorite)
 │   │   └── StacjaViewModel.cs      — ViewModel for station list binding
@@ -1603,6 +1704,7 @@ RadioAndroid/
 │   ├── AudioPlaybackService.Callbacks.cs — MediaSession + AudioFocus
 │   ├── AudioPlaybackService.Cellular.cs  — Cellular fallback, WiFi recovery monitor
 │   ├── AudioPlaybackService.Watchdog.cs  — Watchdog timer, VLC activity tracking
+│   ├── BillingService.cs                 — Google Play Billing integration (Plugin.InAppBilling, purchase + restore)
 │   └── AndroidManifest.xml               — Android app manifest (permissions, features)
 └── RadioAndroid.csproj                   — .NET MAUI project file (dependencies, config)
 ```
@@ -1658,6 +1760,7 @@ Separating playback logic, reconnect logic, media session callbacks, queue manag
 | `Microsoft.Extensions.Logging.Debug` | 10.0.5 | Debug logging |
 | `CommunityToolkit.Maui` | 14.0.1 | MAUI community extensions |
 | `LibVLCSharp` | 3.9.6 | C# bindings for LibVLC audio engine |
+| `Plugin.InAppBilling` | 7.1.1 | Google Play Billing — integration for planned freemium features (Favorites, EQ Save & Load) |
 
 ### Android-only
 
@@ -1669,12 +1772,17 @@ Separating playback logic, reconnect logic, media session callbacks, queue manag
 | `Xamarin.AndroidX.Media` | 1.7.1.2 | `MediaBrowserServiceCompat` — required for Android Auto |
 | `Xamarin.AndroidX.Lifecycle.*` | 2.10.0.2 | Must be explicitly pinned — see below |
 | `Xamarin.AndroidX.SavedState.SavedState.Ktx` | 1.4.0.2 | SavedState Kotlin extensions (AndroidX dependency) |
+| `Xamarin.Google.Android.Play.Billing` | 7.1.1 | Google Play Billing library bindings — pulled transitively by `Plugin.InAppBilling`; pinned explicitly to prevent version conflicts |
+| `Xamarin.AndroidX.Activity` | 1.10.1.1 | AndroidX Activity — pinned to resolve conflict introduced by billing |
+| `Xamarin.AndroidX.Fragment` | 1.8.7.1 | AndroidX Fragment — pinned to resolve conflict introduced by billing |
 
-> ⚠️ **AndroidX.Lifecycle version pinning — required for build**
+> ⚠️ **AndroidX version pinning — required for build**
 >
-> `Xamarin.AndroidX.Media` has deep transitive dependencies on AndroidX Lifecycle. Without explicit version pins, NuGet pulls in conflicting versions and the build fails with errors like `Duplicate class kotlin.collections.jdk8.*` or `Cannot resolve symbol 'LifecycleOwner'`.
+> Two separate features introduce AndroidX transitive dependency conflicts: `Xamarin.AndroidX.Media` (Android Auto support) and `Plugin.InAppBilling` (Google Play Billing). Without explicit version pins, NuGet pulls in conflicting versions of the Lifecycle, Activity, and Fragment sub-packages, causing build failures that look like `Duplicate class kotlin.collections.jdk8.*` or `Cannot resolve symbol 'LifecycleOwner'`.
 >
-> Add these to your `.csproj`:
+> The general rule: every time a new Android-targeting NuGet package is added, check for new `Duplicate class` build errors immediately — the fix is always an explicit pin.
+>
+> Required pins for this project:
 
 ```xml
 <PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="2.10.0.2" />
@@ -1691,6 +1799,12 @@ Separating playback logic, reconnect logic, media session callbacks, queue manag
 <PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="2.10.0.2" />
 <PackageReference Include="Xamarin.AndroidX.SavedState" Version="1.4.0.2" />
 <PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
+<!-- Additional pins required by Plugin.InAppBilling -->
+<PackageReference Include="Xamarin.Google.Android.Play.Billing" Version="7.1.1" />
+<PackageReference Include="Xamarin.AndroidX.Activity" Version="1.10.1.1" />
+<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.10.1.1" />
+<PackageReference Include="Xamarin.AndroidX.Fragment" Version="1.8.7.1" />
+<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.8.7.1" />
 ```
 
 
