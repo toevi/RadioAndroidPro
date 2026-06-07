@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RadioAndroid 6.0 — Technical Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#08080e;--bg2:#0d0d15;--bg3:#111119;--bg4:#15151f;
+  --accent:#e8ff47;--accent2:#47ffb8;--red:#ff4757;--orange:#ff9f43;
+  --border:rgba(255,255,255,0.06);--text:#dde1e7;--muted:#5a6070;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden;line-height:1.6;}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(8,8,14,0.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:11px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.nav-brand{font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;text-decoration:none;}
+.nav-brand em{color:var(--accent);font-style:normal;}
+.nav-links{display:flex;gap:6px;flex-wrap:wrap;}
+.nav-links a{font-family:var(--mono);font-size:10px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:5px;border:1px solid transparent;transition:all 0.2s;}
+.nav-links a:hover{color:var(--accent);border-color:rgba(232,255,71,0.2);}
+
+/* HERO */
+.hero{background:var(--bg2);border-bottom:1px solid rgba(232,255,71,0.12);padding:72px 28px 56px;text-align:center;position:relative;overflow:hidden;}
+.hero-glow{position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(232,255,71,0.06) 0%,transparent 65%);pointer-events:none;}
+.hero-kicker{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:5px;text-transform:uppercase;margin-bottom:14px;}
+.hero h1{font-family:var(--mono);font-size:clamp(24px,5vw,46px);font-weight:700;color:#fff;letter-spacing:-1px;margin-bottom:12px;}
+.hero h1 em{color:var(--accent);font-style:normal;}
+.hero-sub{font-size:15px;color:var(--muted);max-width:520px;margin:0 auto 32px;}
+.hero-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.htag{font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:#aaa;}
+.htag.hi{border-color:rgba(232,255,71,0.35);color:var(--accent);background:rgba(232,255,71,0.04);}
+.htag.hi2{border-color:rgba(71,255,184,0.3);color:var(--accent2);background:rgba(71,255,184,0.04);}
+
+/* SECTIONS */
+.wrap{max-width:1100px;margin:0 auto;padding:0 28px;}
+.sec{padding:72px 0;}
+.sec-kicker{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:4px;text-transform:uppercase;margin-bottom:8px;}
+.sec-title{font-family:var(--mono);font-size:clamp(20px,3.5vw,32px);font-weight:700;color:#fff;margin-bottom:8px;}
+.sec-title em{color:var(--accent);font-style:normal;}
+.sec-title.red em{color:var(--red);}
+.sec-desc{font-size:14px;color:var(--muted);max-width:640px;margin-bottom:40px;line-height:1.75;}
+
+/* VLC SECTION */
+.vlc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:32px;}
+.vlc-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:22px 20px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.vlc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform 0.35s;}
+.vlc-card:hover{border-color:rgba(232,255,71,0.2);}
+.vlc-card:hover::before{transform:scaleX(1);}
+.vlc-card .vc-icon{font-size:26px;margin-bottom:10px;}
+.vlc-card h4{font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;margin-bottom:6px;}
+.vlc-card p{font-size:12px;color:var(--muted);line-height:1.65;}
+.vlc-card .vc-tag{font-family:var(--mono);font-size:9px;color:var(--accent2);margin-top:8px;letter-spacing:1px;}
+
+/* EQ VISUAL */
+.eq-visual{background:var(--bg3);border:1px solid rgba(232,255,71,0.15);border-radius:14px;padding:28px 24px;margin:28px 0;}
+.eq-title{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:20px;}
+.eq-bars{display:flex;align-items:flex-end;gap:8px;height:80px;}
+.eq-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+.eq-bar{width:100%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--accent) 0%,rgba(232,255,71,0.3) 100%);transition:height 0.4s ease;cursor:pointer;}
+.eq-bar:hover{background:linear-gradient(180deg,#fff 0%,var(--accent) 100%);}
+.eq-freq{font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;white-space:nowrap;}
+.eq-note{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:16px;line-height:1.6;}
+
+/* STATIONS SECTION */
+.stations-highlight{background:linear-gradient(135deg,rgba(71,255,184,0.06) 0%,rgba(232,255,71,0.04) 100%);border:1px solid rgba(71,255,184,0.2);border-radius:16px;padding:36px 32px;margin:32px 0;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;}
+.sh-left h3{font-family:var(--mono);font-size:clamp(18px,3vw,26px);font-weight:700;color:#fff;margin-bottom:12px;}
+.sh-left h3 em{color:var(--accent2);font-style:normal;}
+.sh-left p{font-size:13px;color:var(--muted);line-height:1.75;}
+.sh-right{display:flex;flex-direction:column;gap:10px;}
+.sh-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:var(--mono);font-size:11px;display:flex;align-items:center;gap:10px;}
+.sh-item .si-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);flex-shrink:0;}
+.sh-item .si-text{color:#ccc;}
+.code-pill{background:#0d1117;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:11px;color:#7ee787;margin-top:14px;overflow-x:auto;line-height:1.7;}
+
+/* PRO/CON TABLES */
+.pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:32px 0;}
+.pc-table{background:var(--bg3);border-radius:14px;overflow:hidden;border:1px solid var(--border);}
+.pc-head{padding:16px 20px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.pc-head.pro{background:rgba(71,255,184,0.08);color:var(--accent2);border-bottom:1px solid rgba(71,255,184,0.15);}
+.pc-head.con{background:rgba(255,71,87,0.08);color:var(--red);border-bottom:1px solid rgba(255,71,87,0.15);}
+.pc-row{padding:11px 20px;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:flex-start;gap:10px;transition:background 0.15s;}
+.pc-row:last-child{border-bottom:none;}
+.pc-row:hover{background:rgba(255,255,255,0.03);}
+.pc-row .mark{font-size:14px;flex-shrink:0;margin-top:1px;}
+.pc-row .txt{color:#ccc;line-height:1.5;}
+.pc-row .txt strong{color:#fff;font-weight:600;}
+.pc-row .txt small{color:var(--muted);font-size:11px;display:block;margin-top:2px;}
+
+/* OTHER APPS TABLE */
+.apps-table-wrap{overflow-x:auto;margin:24px 0;}
+.apps-table{width:100%;border-collapse:collapse;min-width:760px;font-size:12px;}
+.apps-table th{background:var(--bg3);padding:13px 16px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;font-weight:400;border-bottom:1px solid var(--border);}
+.apps-table th.sticky{position:sticky;left:0;}
+.apps-table td{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+.apps-table td.sticky{position:sticky;left:0;background:var(--bg2);}
+.apps-table tr:hover td{background:rgba(255,255,255,0.025);}
+.apps-table tr:hover td.sticky{background:var(--bg3);}
+.app-name-cell{display:flex;align-items:center;gap:10px;}
+.app-name-cell .an-icon{font-size:18px;}
+.app-name-cell .an-name{font-family:var(--mono);font-size:12px;font-weight:600;color:#ddd;}
+.app-name-cell .an-tag{font-size:10px;color:var(--muted);}
+.pill{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px;white-space:nowrap;}
+.pill.y{background:rgba(71,255,184,0.1);color:var(--accent2);border:1px solid rgba(71,255,184,0.2);}
+.pill.n{background:rgba(255,71,87,0.08);color:#ff6b6b;border:1px solid rgba(255,71,87,0.15);}
+.pill.p{background:rgba(232,255,71,0.08);color:var(--accent);border:1px solid rgba(232,255,71,0.2);}
+.pill.m{background:rgba(255,159,67,0.08);color:var(--orange);border:1px solid rgba(255,159,67,0.2);}
+.cat-row-apps td{padding:10px 16px 5px;font-family:var(--mono);font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:3px;background:rgba(232,255,71,0.02);border-top:1px solid rgba(232,255,71,0.07);font-weight:400;}
+
+/* VERDICT */
+.verdict-box{background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:36px 32px;margin:32px 0;text-align:center;}
+.verdict-box h3{font-family:var(--mono);font-size:clamp(16px,3vw,24px);font-weight:700;color:#fff;margin-bottom:12px;}
+.verdict-box p{font-size:14px;color:var(--muted);max-width:600px;margin:0 auto 24px;line-height:1.75;}
+.verdict-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.vbtn{font-family:var(--mono);font-size:12px;font-weight:600;padding:11px 24px;border-radius:8px;text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}
+.vbtn.primary{background:var(--accent);color:#000;}
+.vbtn.primary:hover{background:#fff;transform:translateY(-2px);}
+.vbtn.ghost{background:transparent;color:#aaa;border:1px solid var(--border);}
+.vbtn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+
+/* DIVIDER */
+.hdiv{height:1px;background:var(--border);margin:0 28px;}
+
+/* FOOTER */
+footer{padding:40px 28px;border-top:1px solid var(--border);text-align:center;}
+footer p{font-family:var(--mono);font-size:10px;color:#2a2a35;line-height:2;}
+footer a{color:var(--accent);text-decoration:none;}
+
+/* NOTE COLUMNS */
+.col-note{max-width:180px;font-size:11px;color:var(--muted);line-height:1.5;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.ra6-value{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:var(--mono);font-size:10px;white-space:nowrap;}
+.ra6-note{max-width:260px;font-size:11px;color:var(--muted);line-height:1.5;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);}
+
+/* TABLET 901-1024 — truncate notes */
+@media(max-width:1024px) and (min-width:901px){
+  .col-note,.ra6-note{max-width:120px;font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+}
+
+/* TABLET ≤900 — hide Note column */
+@media(max-width:900px){
+  .col-note,.ra6-note{display:none;}
+  .apps-table th:last-child,#ra6Table th:last-child{display:none;}
+}
+
+/* MOBILE ≤600 — RA6 same as other apps table: scrollable, tighter padding */
+@media(max-width:600px){
+  #ra6Table td,#ra6Table th{padding:8px 6px;font-size:10px;}
+  #ra6Table td.sticky,#ra6Table th.sticky{
+    position:sticky;left:0;
+    width:115px;
+    min-width:115px;
+    max-width:115px;
+    white-space:normal;
+    word-break:break-word;
+    font-size:10px;
+    line-height:1.3;
+  }
+  #ra6Table td.ra6-note,#ra6Table th:last-child{display:none;}
+  #ra6Table td.ra6-value{font-size:10px;white-space:normal;word-break:break-word;max-width:160px;}
+}
+
+/* RESPONSIVE LAYOUT */
+@media(max-width:700px){
+  .pc-grid{grid-template-columns:1fr;}
+  .nav-links{display:none;}
+  .wrap{padding:0 14px;}
+  .sec{padding:44px 0;}
+  .hero{padding:48px 14px 36px;}
+  .vlc-grid{grid-template-columns:1fr;}
+  /* Stations — single column, prevent overflow */
+  .stations-highlight{
+    grid-template-columns:1fr !important;
+    gap:18px;
+  }
+  .code-pill{
+    font-size:10px;
+    word-break:break-all;
+    white-space:pre-wrap;
+    overflow-x:hidden;
+  }
+  /* EQ bars smaller on mobile */
+  .eq-bars{height:60px;}
+  /* verdict buttons stack */
+  .verdict-btns{flex-direction:column;align-items:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="#">RadioAndroid <em>6.0</em></a>
+  <div class="nav-links">
+    <a href="#vlc">LibVLC Engine</a>
+    <a href="#eq">Equalizer</a>
+    <a href="#stations">Stations</a>
+    <a href="#procon">Pros & Cons</a>
+    
+    <a href="index.html">← App Page</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-kicker">Technical Overview · May 2026</div>
+  <h1>RadioAndroid <em>6.0</em></h1>
+  <p class="hero-sub">Built for everyday travel — car, bike, bus, train. An honest technical breakdown of what it does well and what it doesn't. <strong style="color:#ddd">You decide.</strong></p>
+  <div class="hero-tags">
+    <span class="htag hi">🚗 Built for Travel</span>
+    <span class="htag hi">LibVLC Engine</span>
+    <span class="htag hi2">Unlimited Stations</span>
+    <span class="htag hi">10-Band Native EQ</span>
+    <span class="htag hi">Android Auto</span>
+    <span class="htag hi2">C# / .NET MAUI</span>
+    <span class="htag">Free · No Ads</span>
+  </div>
+</header>
+
+<!-- VLC ENGINE -->
+<div class="wrap">
+<section class="sec" id="vlc">
+  <div class="sec-kicker">Under the Hood</div>
+  <div class="sec-title">Why <em>LibVLC</em> matters for internet radio</div>
+  <p class="sec-desc">Most Android radio apps rely on Android's built-in MediaPlayer or Google's ExoPlayer. RadioAndroid 6.0 uses <strong style="color:#fff">LibVLC</strong> — the same engine behind VLC Media Player, trusted by 300+ million users worldwide. For internet streams, the difference is significant.</p>
+
+  <div class="vlc-grid">
+    <div class="vlc-card">
+      <div class="vc-icon">🌐</div>
+      <h4>Protocol Coverage</h4>
+      <p>Handles HTTP, HTTPS, HLS, AAC, MP3, Ogg Vorbis, DASH, ICY metadata and more — natively, without third-party plugins.</p>
+      <div class="vc-tag">vs ExoPlayer: limited HLS, no ICY</div>
+    </div>
+    <div class="vlc-card">
+      <div class="vc-icon">🔁</div>
+      <h4>Stream Reconnection</h4>
+      <p>VLC's internal buffer management handles stream drops at the engine level. RadioAndroid adds a second app-level watchdog on top for double protection.</p>
+      <div class="vc-tag">2-layer stability system</div>
+    </div>
+    <div class="vlc-card">
+      <div class="vc-icon">🎚️</div>
+      <h4>Native 10-Band Equalizer</h4>
+      <p>The EQ operates directly in the VLC audio pipeline — not via Android's AudioEffect API. This means it works on all streams, including low-bitrate and AAC.</p>
+      <div class="vc-tag">60 Hz → 14 kHz · 10 bands</div>
+    </div>
+    <div class="vlc-card">
+      <div class="vc-icon">⚡</div>
+      <h4>Low Latency Buffering</h4>
+      <p>VLC's intelligent pre-buffering reduces stream startup time and minimises gaps when switching stations — especially on slow mobile connections.</p>
+      <div class="vc-tag">Adaptive buffer management</div>
+    </div>
+    <div class="vlc-card">
+      <div class="vc-icon">📡</div>
+      <h4>Cellular Fallback</h4>
+      <p>When Wi-Fi drops, the app transparently switches to LTE/5G without interrupting playback. Handled at VLC transport layer.</p>
+      <div class="vc-tag">Wi-Fi → LTE seamless switch</div>
+    </div>
+    <div class="vlc-card">
+      <div class="vc-icon">🔑</div>
+      <h4>Private & Authenticated Streams</h4>
+      <p>Services like RadioTunes, di.fm and similar platforms protect their premium streams with a personal access key embedded in the URL. RadioAndroid handles these natively — just paste your full personal stream URL and it plays instantly, exactly like any public station. Because LibVLC treats authenticated HTTP streams the same as open ones, it is likely to work with other subscription services that use the same approach.</p>
+      <div class="vc-tag">RadioTunes · di.fm · personal key URLs · and more</div>
+    </div>
+    <div class="vlc-card">
+      <div class="vc-icon">🔓</div>
+      <h4>Open Source · LGPL</h4>
+      <p>LibVLC is open-source under LGPL licence. No vendor lock-in, no telemetry, no black-box audio processing.</p>
+      <div class="vc-tag">Trusted by 300M+ users globally</div>
+    </div>
+  </div>
+
+  <!-- EQ VISUAL -->
+  <div class="eq-visual" id="eq">
+    <div class="eq-title">10-Band LibVLC Equalizer — native audio pipeline</div>
+    <div class="eq-bars" id="eqBars"></div>
+    <p class="eq-note">↑ Click any band to randomise the preset. The EQ runs inside the VLC audio pipeline — not Android's AudioEffect API — so it works on every stream format, including low-bitrate AAC and Ogg Vorbis. Presets can be <strong style="color:#e8ff47">saved and loaded by name</strong> at any time.</p>
+  </div>
+</section>
+
+<div class="hdiv"></div>
+
+<!-- UNLIMITED STATIONS -->
+<section class="sec" id="stations">
+  <div class="sec-kicker">Database Model</div>
+  <div class="sec-title">Add <em>any</em> station — unlimited</div>
+  <p class="sec-desc">Unlike catalogue-based apps that lock you into their own station list, RadioAndroid 6.0 lets you add any HTTP/HTTPS stream URL. Your database is limited only by what exists on the internet.</p>
+
+  <div class="stations-highlight" style="grid-template-columns:1fr;">
+    <div class="sh-left">
+      <h3>Your playlist,<br/><em>your rules</em></h3>
+      <p>Add, edit, delete and reorder any station. Both formats fully supported — save, load and edit manually in any text editor. No account needed, no cloud dependency.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:8px;">
+
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(232,255,71,0.15);border-radius:10px;padding:18px;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">💾 JSON — RadioAndroid native</div>
+        <div class="code-pill">[{"Nazwa":"RMF FM",<br/>"Sciezka":"http://rs201-krk.rmfstream.pl/rmf_fm"},<br/>{"Nazwa":"BBC World",<br/>"Sciezka":"http://stream.live.vc.bbcmedia.co.uk/bbc_world_service"}]</div>
+        <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;">Stores stations + favourites · human-readable</p>
+      </div>
+
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:18px;">
+        <div style="font-family:var(--mono);font-size:9px;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">📋 PLS — VLC / Winamp compatible</div>
+        <div class="code-pill">[playlist]<br/>NumberOfEntries=2<br/>File1=http://rs201-krk.rmfstream.pl/rmf_fm<br/>Title1=RMF FM<br/>File2=http://stream.live.vc.bbcmedia.co.uk/bbc_world_service<br/>Title2=BBC World</div>
+        <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;">Works with VLC, Winamp and RadioAndroid</p>
+      </div>
+
+    </div>
+    <div class="sh-right" style="margin-top:8px;">
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Add any HTTP / HTTPS stream URL</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Full CRUD — create, read, update, delete</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Save &amp; load in JSON (native RadioAndroid format)</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Save &amp; load in PLS (VLC / Winamp compatible)</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Export &amp; share via Android Share intent (WhatsApp, email…)</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Save &amp; load named equalizer presets</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Browse fmstream.org for thousands of URLs</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">No account, no cloud, no restrictions</span></div>
+      <div class="sh-item"><span class="si-dot"></span><span class="si-text">Works fully offline once URLs are saved</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="hdiv"></div>
+
+<!-- PROS & CONS -->
+<section class="sec" id="procon">
+  <div class="sec-kicker">Honest Assessment</div>
+  <div class="sec-title">What it <em>does well</em> — and what it doesn't</div>
+  <p class="sec-desc">No app is perfect. Here's an honest breakdown so you can decide if RadioAndroid 6.0 is right for you.</p>
+
+  <div class="pc-grid">
+    <div class="pc-table">
+      <div class="pc-head pro"><span>✅</span> Strengths</div>
+      <div class="pc-row"><span class="mark">🚗</span><div class="txt"><strong>Built for everyday travel</strong><small>Used daily in cars, bikes, buses and trains. Designed from day one as a radio for commuters and travellers.</small></div></div>
+      <div class="pc-row"><span class="mark">🔧</span><div class="txt"><strong>LibVLC engine</strong><small>Best-in-class stream stability, protocol support and audio pipeline</small></div></div>
+      <div class="pc-row"><span class="mark">🎚️</span><div class="txt"><strong>Native 10-band equalizer</strong><small>Runs inside VLC pipeline, works on all stream formats</small></div></div>
+      <div class="pc-row"><span class="mark">📂</span><div class="txt"><strong>Unlimited custom stations</strong><small>Add any stream URL — no catalogue lock-in</small></div></div>
+      <div class="pc-row"><span class="mark">🚗</span><div class="txt"><strong>Full Android Auto</strong><small>Google-reviewed, not just audio — full UI control while driving</small></div></div>
+      <div class="pc-row"><span class="mark">📺</span><div class="txt"><strong>Chromecast TV &amp; ChromeOS</strong><small>One app for phone, tablet, TV box and laptop</small></div></div>
+      <div class="pc-row"><span class="mark">📡</span><div class="txt"><strong>Wi-Fi → LTE fallback</strong><small>Seamless switch, no playback interruption</small></div></div>
+      <div class="pc-row"><span class="mark">🎨</span><div class="txt"><strong>VU Meter &amp; skins</strong><small>5 visualiser modes, 8 colour palettes, custom background skins</small></div></div>
+      <div class="pc-row"><span class="mark">🆓</span><div class="txt"><strong>Free — zero ads</strong><small>No ads, no subscription, no tracking</small></div></div>
+      <div class="pc-row"><span class="mark">⌚</span><div class="txt"><strong>BT watch control</strong><small>Control playback from Bluetooth-enabled smartwatches via phone</small></div></div>
+      <div class="pc-row"><span class="mark">💾</span><div class="txt"><strong>JSON / PLS import &amp; export</strong><small>Portable playlists, easy backup, VLC-compatible format</small></div></div>
+    </div>
+
+    <div class="pc-table">
+      <div class="pc-head con"><span>⚠️</span> Limitations</div>
+      <div class="pc-row"><span class="mark">🍎</span><div class="txt"><strong>No iOS version yet</strong><small>MAUI port is planned but not released — Android only for now</small></div></div>
+      <div class="pc-row"><span class="mark">💻</span><div class="txt"><strong>No Windows desktop app yet</strong><small>Same — planned via .NET MAUI but not available</small></div></div>
+      <div class="pc-row"><span class="mark">📖</span><div class="txt"><strong>No built-in station catalogue</strong><small>You must add stations manually or import from fmstream.org — no built-in discovery browser</small></div></div>
+      <div class="pc-row"><span class="mark">⌚</span><div class="txt"><strong>No Wear OS support</strong><small>Smartwatch apps on Wear OS not supported</small></div></div>
+      <div class="pc-row"><span class="mark">☁️</span><div class="txt"><strong>No cloud sync</strong><small>Playlist lives on device — manual backup required if you switch phones</small></div></div>
+      <div class="pc-row"><span class="mark">👥</span><div class="txt"><strong>Smaller community</strong><small>Not as well-known as TuneIn or iHeartRadio — fewer reviews, less forum support</small></div></div>
+      <div class="pc-row"><span class="mark">🎙️</span><div class="txt"><strong>No podcast support</strong><small>Radio streams only — no podcast directory or RSS feed support</small></div></div>
+      <div class="pc-row"><span class="mark">🔍</span><div class="txt"><strong>No station search</strong><small>No in-app search across a station database — depends on external sources</small></div></div>
+      <div class="pc-row"><span class="mark">📱</span><div class="txt"><strong>Single developer project</strong><small>Updates depend on one developer's availability</small></div></div>
+    </div>
+  </div>
+
+  <!-- RA6 FEATURE TABLE -->
+  <div style="margin-top:40px;">
+    <div style="font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:4px;text-transform:uppercase;margin-bottom:16px;">RadioAndroid 6.0 — Full Feature Table</div>
+    <div class="apps-table-wrap">
+      <table class="apps-table" id="ra6Table"></table>
+    </div>
+  </div>
+</section>
+
+
+<!-- CTA -->
+<div class="verdict-box">
+  <div style="font-size:32px;margin-bottom:14px;">📱</div>
+  <h3>Ready to try RadioAndroid 6.0?</h3>
+  <p>Free, no ads, no tracking. Built for everyday travel — car, bike, bus, train. Powered by LibVLC on Android 8–16.</p>
+  <div class="verdict-btns">
+    <a href="https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid" class="vbtn primary" target="_blank">📱 Download on Google Play</a>
+    <a href="index.html" class="vbtn ghost">← Back to App Page</a>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <p>RadioAndroid 6.0 · Tomek Maslowski / tmfgroup · <a href="https://github.com/toevi/RadioAndroidPro" target="_blank">GitHub</a> · <a href="https://buycoffee.to/toevi" target="_blank">☕ Support the dev</a></p>
+  <p style="margin-top:4px;">Data based on public documentation · May 2026 · Scores are the author's assessment</p>
+</footer>
+
+<script>
+// EQ BARS
+const EQ_FREQS=['60Hz','120Hz','250Hz','500Hz','1kHz','2kHz','4kHz','7kHz','11kHz','14kHz'];
+const EQ_HEIGHTS=[55,70,80,65,75,60,85,70,50,45];
+const eqContainer=document.getElementById('eqBars');
+function buildEQ(heights){
+  eqContainer.innerHTML='';
+  heights.forEach((h,i)=>{
+    const wrap=document.createElement('div');wrap.className='eq-bar-wrap';
+    const bar=document.createElement('div');bar.className='eq-bar';
+    bar.style.height=h+'px';
+    bar.onclick=()=>{
+      const newH=EQ_HEIGHTS.map(()=>Math.floor(Math.random()*70)+15);
+      buildEQ(newH);
+    };
+    const freq=document.createElement('div');freq.className='eq-freq';freq.textContent=EQ_FREQS[i];
+    wrap.appendChild(bar);wrap.appendChild(freq);eqContainer.appendChild(wrap);
+  });
+}
+buildEQ(EQ_HEIGHTS);
+
+// RADIOANDROID 6.0 FEATURE TABLE
+const RA6_ROWS=[
+  {cat:'🔧 Engine & Stability',feature:'Audio engine',status:'pro',value:'LibVLC (native)',note:'Same engine as VLC — 300M+ users. Not MediaPlayer, not ExoPlayer.'},
+  {cat:'🔧 Engine & Stability',feature:'Stream stability',status:'pro',value:'2-layer + watchdog',note:'VLC internal reconnect + app-level watchdog running in parallel.'},
+  {cat:'🔧 Engine & Stability',feature:'Auto-reconnect',status:'pro',value:'✓ VLC + app level',note:'Reconnects automatically at both engine and application layer.'},
+  {cat:'🔧 Engine & Stability',feature:'Cellular fallback',status:'pro',value:'✓ Wi-Fi → LTE',note:'Seamlessly switches to mobile data when Wi-Fi drops.'},
+  {cat:'🔧 Engine & Stability',feature:'Protocol support',status:'pro',value:'HTTP HLS AAC MP3 Ogg DASH ICY',note:'Full format coverage natively — no plugins required.'},
+  {cat:'📱 Platforms',feature:'Designed for travel',status:'pro',value:'✓ Car · Bike · Bus · Train',note:'Used daily in every means of transport. Built from day one as a radio for commuters and travellers on the move.'},
+  {cat:'📱 Platforms',feature:'Android phones & tablets',status:'pro',value:'✓ Android 8–16 (API 26–35)',note:'Tested across a wide range of devices and OS versions.'},
+  {cat:'📱 Platforms',feature:'Android Auto',status:'pro',value:'✓ Full (Google-reviewed)',note:'Full UI integration — not just audio passthrough. Officially reviewed by Google.'},
+  {cat:'📱 Platforms',feature:'Chromecast TV / TV Box',status:'pro',value:'✓ LAN/Wi-Fi',note:'Streams over home network via Chromecast — no native Android TV app required.'},
+  {cat:'📱 Platforms',feature:'ChromeOS / Laptops',status:'pro',value:'✓',note:'Runs on Chromebooks and Chrome OS laptops.'},
+  {cat:'📱 Platforms',feature:'Bluetooth & headphones',status:'pro',value:'✓ Media Session',note:'Works with car Bluetooth, headphones, Boomboxes and BT watches.'},
+  {cat:'📱 Platforms',feature:'iOS',status:'con',value:'✗ Not yet',note:'Planned via .NET MAUI but not released.'},
+  {cat:'📱 Platforms',feature:'Windows desktop',status:'con',value:'✗ Not yet',note:'Also planned via MAUI — not available yet.'},
+  {cat:'📱 Platforms',feature:'Wear OS',status:'con',value:'✗ Not supported',note:'Smartwatch apps on Wear OS are not supported.'},
+  {cat:'🎨 UI & Audio',feature:'10-band equalizer',status:'pro',value:'✓ Native LibVLC',note:'Runs inside VLC pipeline. Works on ALL stream formats including AAC.'},
+  {cat:'🎨 UI & Audio',feature:'VU Meter',status:'pro',value:'✓ 5 modes · 8 palettes',note:'Real-time visualiser with multiple display modes and colour themes.'},
+  {cat:'🎨 UI & Audio',feature:'Background skins',status:'pro',value:'✓ GraphicsView',note:'Static background skins rendered via .NET MAUI GraphicsView. New in v6.0.'},
+  {cat:'📂 Stations',feature:'Custom station add/edit/delete',status:'pro',value:'✓ Full CRUD',note:'Complete control — add any HTTP/HTTPS stream URL.'},
+  {cat:'📂 Stations',feature:'Station database',status:'pro',value:'Unlimited',note:'No catalogue lock-in. Limited only by what streams exist on the internet.'},
+  {cat:'📂 Stations',feature:'JSON save & load',status:'pro',value:'✓ Native RadioAndroid format',note:'RadioAndroid\'s JSON format stores both stations and favourites. Human-readable — can be edited manually in any text editor.'},
+  {cat:'📂 Stations',feature:'PLS save & load',status:'pro',value:'✓ Full PLS support',note:'PLS is a universal playlist format supported by RadioAndroid 6.0, VLC and Winamp — playlists work across all three interchangeably. Can be edited manually in any text editor.'},
+  {cat:'📂 Stations',feature:'Playlist share',status:'pro',value:'✓ Android Share intent',note:'Share your station list via any Android app — WhatsApp, email, Drive, etc.'},
+  {cat:'📂 Stations',feature:'Equalizer preset save/load',status:'pro',value:'✓ Named presets',note:'Save your EQ settings as named presets and reload them at any time.'},
+  {cat:'📂 Stations',feature:'RadioTunes support',status:'pro',value:'✓ Personal key playlists',note:'Supports RadioTunes and similar subscription services — paste your personal playlist URL with your own key directly into the app.'},
+  {cat:'📂 Stations',feature:'Built-in station catalogue',status:'con',value:'✗ None',note:'No in-app discovery browser. Use fmstream.org externally.'},
+  {cat:'📂 Stations',feature:'In-app station search',status:'con',value:'✗ None',note:'No search across a station database — relies on external sources.'},
+  {cat:'📂 Stations',feature:'Cloud sync',status:'con',value:'✗ None',note:'Playlist lives on device. Manual JSON export required for backup.'},
+  {cat:'💰 Business',feature:'Free to use',status:'pro',value:'✓ Free forever',note:'No purchase required, no freemium tiers, no subscription.'},
+  {cat:'💰 Business',feature:'Ad-free',status:'pro',value:'✓ Zero ads',note:'No banner, no interstitial, no video ads of any kind.'},
+  {cat:'💰 Business',feature:'No tracking',status:'pro',value:'✓ Zero telemetry',note:'No analytics, no usage tracking, no data collection.'},
+  {cat:'💰 Business',feature:'Podcast support',status:'con',value:'✗ None',note:'Radio streams only. No podcast directory or RSS feed reader.'},
+  {cat:'💰 Business',feature:'Community size',status:'con',value:'Small',note:'Single-developer project — fewer reviews and forum resources than TuneIn.'},
+  {cat:'⚙️ Technology',feature:'Framework',status:'pro',value:'C# / .NET MAUI',note:'Modern cross-platform framework — enables future iOS/Windows ports.'},
+  {cat:'⚙️ Technology',feature:'Audio library',status:'pro',value:'LibVLC · LGPL',note:'Open-source, battle-tested, no vendor lock-in.'},
+  {cat:'⚙️ Technology',feature:'Minimum Android',status:'pro',value:'Android 8.0 (API 26)',note:'Covers 98%+ of active Android devices.'},
+];
+
+const ra6Tbl=document.getElementById('ra6Table');
+const ra6Head=document.createElement('thead');
+const ra6Hr=document.createElement('tr');
+['Feature','Status','Value','Note'].forEach((lbl,i)=>{
+  const th=document.createElement('th');th.textContent=lbl;
+  if(i===0){th.className='sticky';th.style.minWidth='180px';}
+  ra6Hr.appendChild(th);
+});
+ra6Head.appendChild(ra6Hr);ra6Tbl.appendChild(ra6Head);
+
+const ra6Body=document.createElement('tbody');
+let lastCat='';
+RA6_ROWS.forEach((row,fi)=>{
+  if(row.cat!==lastCat){
+    lastCat=row.cat;
+    const crow=document.createElement('tr');crow.className='cat-row-apps';
+    const ctd=document.createElement('td');ctd.colSpan=4;ctd.textContent=row.cat;
+    crow.appendChild(ctd);ra6Body.appendChild(crow);fi=0;
+  }
+  const tr=document.createElement('tr');tr.className='data-row';
+  tr.style.background=fi%2===0?'rgba(255,255,255,0.01)':'transparent';
+
+  const tdF=document.createElement('td');tdF.className='sticky';
+  tdF.style.cssText='font-size:11px;color:#aaa;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);background:#0c0c13;';
+  tdF.textContent=row.feature;tr.appendChild(tdF);
+
+  const tdS=document.createElement('td');tdS.style.cssText='padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);';
+  tdS.innerHTML=row.status==='pro'
+    ?'<span class="pill y">✓ Yes</span>'
+    :'<span class="pill n">✗ No</span>';
+  tr.appendChild(tdS);
+
+  const tdV=document.createElement('td');tdV.className='ra6-value';
+  tdV.style.color=row.status==='pro'?'#e8ff47':'#ff6b6b';
+  tdV.textContent=row.value;tr.appendChild(tdV);
+
+  const tdN=document.createElement('td');tdN.className='ra6-note';tdN.title=row.note;tdN.textContent=row.note;tr.appendChild(tdN);
+
+  ra6Body.appendChild(tr);
+});
+ra6Tbl.appendChild(ra6Body);
+
+// OTHER APPS TABLE
+const OTHERS=[
+  {icon:'🎙',name:'TuneIn Radio',tag:'Largest catalogue',
+   engine:'Proprietary',auto:'✓',tv:'✓',eq:'✗',custom:'✗',ads:'Freemium',price:'$9.99/mo',ios:'✓',openSource:'✗',
+   note:'Best if you want a massive built-in station catalogue and podcast support.'},
+  {icon:'📡',name:'myTuner Radio',tag:'50 000+ stations',
+   engine:'ExoPlayer',auto:'✗',tv:'✗',eq:'✗',custom:'Partial',ads:'Yes',price:'$1.99/mo',ios:'✓',openSource:'✗',
+   note:'Good catalogue, simple UI. No Android Auto or TV support.'},
+  {icon:'🔊',name:'Simple Radio',tag:'Minimalist',
+   engine:'MediaPlayer',auto:'✗',tv:'✗',eq:'✗',custom:'✓',ads:'Aggressive',price:'$2.99/mo',ios:'✓',openSource:'✗',
+   note:'Easiest to use, but poor stream stability and heavy ads.'},
+  {icon:'🌍',name:'Radio Garden',tag:'Globe map UI',
+   engine:'Web/HLS.js',auto:'✗',tv:'✗',eq:'✗',custom:'✗',ads:'Minimal',price:'Free',ios:'✓',openSource:'✗',
+   note:'Unique world-map discovery. No background play or custom stations.'},
+  {icon:'🎵',name:'Audials Radio',tag:'Radio + recording',
+   engine:'ExoPlayer+',auto:'✗',tv:'✗',eq:'Basic',custom:'✓',ads:'Yes',price:'€4.99/mo',ios:'✓',openSource:'✗',
+   note:'Stream recording feature is unique. Windows app available.'},
+  {icon:'📲',name:'RadioDroid',tag:'Open-source',
+   engine:'ExoPlayer',auto:'Partial',tv:'Partial',eq:'✗',custom:'✓',ads:'None',price:'Free',ios:'✗',openSource:'✓',
+   note:'Best open-source option. Good for developers and privacy-conscious users.'},
+  {icon:'❤️',name:'iHeartRadio',tag:'USA dominant',
+   engine:'Proprietary',auto:'✓',tv:'✓',eq:'✗',custom:'✗',ads:'Heavy',price:'$9.99/mo',ios:'✓',openSource:'✗',
+   note:'Huge US catalogue with live shows. No custom stations, heavy advertising.'},
+];
+
+const COL_DEFS=[
+  {key:'engine',label:'Audio Engine'},
+  {key:'auto',label:'Android Auto'},
+  {key:'tv',label:'Chromecast TV'},
+  {key:'eq',label:'Equalizer'},
+  {key:'custom',label:'Custom Stations'},
+  {key:'ads',label:'Ads'},
+  {key:'price',label:'Price'},
+  {key:'ios',label:'iOS'},
+  {key:'openSource',label:'Open Source'},
+];
+
+function pillify(v){
+  if(v==='✓')return`<span class="pill y">✓ Yes</span>`;
+  if(v==='✗')return`<span class="pill n">✗ No</span>`;
+  if(v==='Partial')return`<span class="pill m">~ Partial</span>`;
+  if(v==='Free'||v==='None')return`<span class="pill y">${v}</span>`;
+  if(v==='Aggressive'||v==='Heavy')return`<span class="pill n">${v}</span>`;
+  if(v==='Freemium'||v==='Yes'||v==='Basic')return`<span class="pill m">${v}</span>`;
+  return`<span class="pill p">${v}</span>`;
+}
+
+const tbl=document.getElementById('appsTable'); if(!tbl) { /* no table in this page */ } else {
+const thead=document.createElement('thead');
+const hr=document.createElement('tr');
+['App',...COL_DEFS.map(c=>c.label),'Note'].forEach((lbl,i)=>{
+  const th=document.createElement('th');
+  th.textContent=lbl;
+  if(i===0)th.className='sticky';
+  hr.appendChild(th);
+});
+thead.appendChild(hr);tbl.appendChild(thead);
+
+const tbody=document.createElement('tbody');
+OTHERS.forEach(app=>{
+  const row=document.createElement('tr');
+  const tdApp=document.createElement('td');tdApp.className='sticky';
+  tdApp.innerHTML=`<div class="app-name-cell"><span class="an-icon">${app.icon}</span><div><div class="an-name">${app.name}</div><div class="an-tag">${app.tag}</div></div></div>`;
+  row.appendChild(tdApp);
+  COL_DEFS.forEach(col=>{
+    const td=document.createElement('td');
+    td.innerHTML=pillify(app[col.key]);row.appendChild(td);
+  });
+  const tdNote=document.createElement('td');tdNote.className='col-note';tdNote.title=app.note;tdNote.textContent=app.note;
+  row.appendChild(tdNote);tbody.appendChild(row);
+});
+tbl.appendChild(tbody);
+} // end if(tbl)
+</script>
+</body>
+</html>
