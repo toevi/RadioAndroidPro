@@ -24,7 +24,7 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 > *The real work happens in the background services: audio engine management, stream recovery, Android Auto integration, Bluetooth session handling, and state synchronization across the app. Getting all of this to work reliably in C# and .NET MAUI — a non-native layer on top of Android — was significantly harder than the equivalent in Kotlin, where the platform APIs are first-class citizens. MAUI abstracts the platform, which is convenient until you need to go deep into Android internals. Then you're fighting the framework as much as the problem. The result: a single C# codebase that runs on phones, tablets, Android TV, TV boxes, Android Desktop, Android Auto, Android Automotive OS, Bluetooth devices, and ChromeOS — tested and working on all of them.*
 
-> *Why C# and .NET MAUI? One codebase runs natively on phones, tablets, Android Desktop, Android Auto, AAOS, and ChromeOS — without separate layout files or separate modules per form factor. Kotlin and Gradle are Android-only; there is no migration path from there to Windows or macOS. A Windows desktop port is a planned next step — adding one target to `.csproj` is all it takes. See [Why .NET MAUI — Not Kotlin, Not Gradle](#-why-net-maui--not-kotlin-not-gradle) for a full technical comparison.*
+> *Why C# and .NET MAUI? Because MAUI is a cross-platform UI framework — the same codebase can target Android, Windows, and macOS without rewriting the application layer. Kotlin and Gradle are Android-only; there is no migration path from there. With C# and MAUI, a Windows desktop port is a realistic next step, and a macOS port follows the same logic. A Windows version is planned — likely the last milestone before the project is considered feature-complete.*
 
 > *This app navigates uncharted waters. There are very few examples of .NET MAUI + C# + LibVLC on Android pushed this far — into native audio focus, background services, Android Auto, and deep platform integration. Some things did not work on the first attempt, or the second. The solutions in this README are the result of that process — not a straight line from idea to working code, but a map drawn while sailing.*
 
@@ -32,28 +32,32 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 ## Table of Contents
 
-- [Why .NET MAUI — Not Kotlin, Not Gradle](#️⃣-why-net-maui--not-kotlin-not-gradle)
-- [Stream Stability — The Hard Problem](#-stream-stability--the-hard-problem)
-- Technical Deep Dives
-  - [1. LibVLC Native Thread Deadlock](#1-libvlc-native-thread-deadlock)
-  - [2. SIGSEGV from LibVLCSharp Native Memory](#2-sigsegv-from-libvlcsharp-native-memory)
-  - [3. Foreground Service Crash on Android 12 / 12.1](#3-foreground-service-crash-on-android-12--121)
-  - [3.1. Station Edit, Add, Delete — Service Must Be Stopped First](#31-station-edit-add-delete--service-must-be-stopped-first)
-  - [4. MediaBrowserServiceCompat and Android Auto](#4-mediabrowserservicecompat-and-android-auto)
-  - [5. AudioFocus and UI/Service State Synchronization](#5-audiofocus-and-uiservice-state-synchronization)
-  - [5.1. Favorites — Multi-Surface State Synchronization](#51-favorites--multi-surface-state-synchronization)
-  - [5.2. Android Auto + Favorites — Synchronization Problem and Solution](#52-android-auto--favorites--synchronization-problem-and-solution)
-  - [6. LibVLCSharp Memory Safety Checklist](#6-libvlcsharp-memory-safety-checklist)
-  - [7. VLC Equalizer in .NET MAUI (LibVLCSharp)](#7-vlc-equalizer-in-net-maui-libvlcsharp)
-  - [8. AAOS Album Art: Bitmap vs URI](#8-aaos-album-art-bitmap-vs-uri)
-  - [9. Google Play AAOS Distribution](#9-google-play-aaos-distribution--why-the-apk-works-but-the-store-rejects-it)
-  - [10. Android Automotive OS — Why the Port Was Abandoned](#10-android-automotive-os--why-the-port-was-abandoned)
-  - [11. Google Play In-App Purchases — One-Time Payment in .NET 10](#11-google-play-in-app-purchases--one-time-payment-in-net-10)
-- [System Architecture & Protection Layers](#-architecture)
-- [Key Dependencies](#-key-dependencies)
-- [Development Environment](#️-development-environment)
-- [Requirements](#-requirements)
-- [License & Author](#-author)
+This document covers the app from two angles: what it does, and what it took to make it work. The second part is longer. If you are a developer building anything with LibVLCSharp, .NET MAUI, Android Auto, or Android background audio — the sections below are the part that does not exist in any official documentation.
+
+- Two-layer stream protection (VLC engine + app logic)
+- VLC parameters: buffering, reconnect, engine and per-stream options
+- Reconnect logic: reconnect loop, watchdog, cellular fallback
+- Station list over 10: pagination and Android Auto handling
+- Stream Stability: The Hard Problem
+- Technical Deep Dives (VLC deadlocks, native memory, Android foreground service, Android Auto integration)
+- Station Edit, Add, Delete — Service Must Be Stopped First
+- AudioFocus and UI/Service State Synchronization
+- Favorites — Multi-Surface State Synchronization
+- Android Auto + Favorites — Synchronization Problem and Solution
+- Reconstructor PLS — merging playlists, CollectionView reorder, and the Switch echo trap
+- VLC Equalizer in .NET MAUI (LibVLCSharp)
+- AAOS Album Art: Bitmap vs URI (porting from AA/BT to Automotive)
+- **Google Play AAOS Distribution: Why the APK works but the store rejects it**
+- **Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)**
+- LibVLCSharp Memory Safety Checklist (SIGSEGV prevention, cleanup rules)
+- System Architecture & Protection Layers
+- AndroidManifest.xml — Permissions Overview
+- **Android 8–12 Compatibility: Notifications, Storage, Directory Access**
+- Project Structure & Key Dependencies
+- **Background Skins — Architecture Guide (GraphicsView + IDrawable + SkinService)**
+- **VU Meter — Architecture Guide (PCM callback + PeriodicTimer + IDrawable modes)**
+- Development Environment
+- License & Author
 
 ---
 
@@ -69,7 +73,7 @@ That is the real technical challenge — and the reason stream stability require
 
 | Platform | Notes |
 |---|---|
-| 📱 Android phones & tablets | Android 8–16 (API 26–36) |
+| 📱 Android phones & tablets | Android 8–16 (API 26–35) |
 | 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
@@ -80,162 +84,13 @@ That is the real technical challenge — and the reason stream stability require
 
 > **Note:** The app works fully and without any restrictions on native Android tablets (including factory-installed in-car units), Android Auto, Bluetooth car/head units, and Android Automotive OS in mobile mode (installed on a tablet or emulator). Full station management — add, edit, delete — works in all of these configurations. However, after complete AAOS adaptation, the app was rejected on Google Play for that platform: AAOS policy prohibits station management (adding stations) on the car screen, even though the feature works correctly outside the store's restrictions. This limitation does not affect Android Auto, Bluetooth, or native Android tablets.
 
-
 ---
 
-## ⚙️ Why .NET MAUI — Not Kotlin, Not Gradle
-
-### Scalability: one codebase, multiple platforms
-
-Kotlin and Gradle are Android-only. There is no migration path from there to Windows or macOS — it is architecturally impossible. C# and .NET MAUI compile the same codebase natively for Android, Windows, and macOS without rewriting the application layer.
-
-| | .NET MAUI (C#) | Kotlin + Gradle |
-|---|---|---|
-| Android | ✅ | ✅ |
-| Windows | ✅ (WinUI 3) | ❌ |
-| macOS | ✅ (Mac Catalyst) | ❌ |
-| iOS | ✅ | ❌ |
-| Single codebase | ✅ | ❌ Android-only |
-
-For this project that means: a Windows Desktop port = adding a target in `.csproj` and running the build. Playback logic, reconnect, watchdog, station management — all of it already works, nothing rewritten.
-
-**Kotlin:**
-```kotlin
-// Kotlin/Android — does not compile for Windows or macOS
-// Every new target = new project, new language, new codebase
-
-class RadioService : Service() {
-    fun startPlayback(url: String) {
-        // Android-only. There is no path from here to desktop.
-    }
-}
-```
-
-**C# / MAUI:**
-```csharp
-// Same code runs on Android, Windows, and macOS
-// Changing the target = one line in .csproj
-
-public partial class RadioService
-{
-    public void StartPlayback(string url)
-    {
-        // Portable logic — platform is irrelevant
-        _mediaPlayer.Play(new Media(_libVLC, new Uri(url)));
-    }
-}
-```
-
-```xml
-<!-- .csproj — adding a Windows target is literally one line -->
-<TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
-```
-
----
-
-### One codebase — all form factors
-
-In Kotlin, targeting phones, tablets, desktop, Android Auto, and Android Automotive OS means separate layout resources, separate navigation patterns, and often separate modules. Each form factor has its own design contract with the platform.
-
-In MAUI, the same layout adapts to every screen size and surface through a single responsive definition. No separate layout files per device class. No duplicated navigation logic. The same C# page renders correctly on a 5" phone, a 12" tablet, a desktop window, an Android Auto head unit, and an AAOS in-dash display.
-
-**Kotlin — separate layout per form factor:**
-```kotlin
-// res/layout/player.xml          → phone
-// res/layout-large/player.xml    → tablet
-// res/layout-xlarge/player.xml   → desktop / large screen
-// res/layout-car/player.xml      → Android Auto (separate MediaBrowserService UI contract)
-// Each file maintained independently — any UI change must be applied to all of them
-```
-
-**C# / MAUI — one layout, all surfaces:**
-```csharp
-// Single page definition — adapts to any screen size at runtime
-new Grid
-{
-    ColumnDefinitions =
-    {
-        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-        new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) }
-    }
-}
-
-// Responsive behavior via OnSizeAllocated — one place, all targets
-protected override void OnSizeAllocated(double width, double height)
-{
-    base.OnSizeAllocated(width, height);
-    MainLayout.Orientation = width > 700
-        ? StackOrientation.Horizontal   // tablet / desktop / AAOS
-        : StackOrientation.Vertical;    // phone
-}
-```
-
-Android Auto and AAOS use a separate UI surface driven by `MediaBrowserService` — MAUI does not interfere with that contract. The service layer, state management, and playback logic are shared in full. Only the surface that renders the controls differs, and that difference is handled by the platform, not by duplicated application code.
-
-The result: UI changes, bug fixes, and new features are applied once and propagate to every supported surface — phones, tablets, Android Desktop, Android Auto, AAOS, and ChromeOS.
-
----
-
-### Performance and responsiveness
-
-MAUI compiles to native AOT (Ahead-of-Time) code — no interpreter, no JIT in hot paths. The UI renders through native platform controls: on Android these are real Android views, not a webview or an emulated canvas.
-
-LibVLC runs on a native C thread at OS level — MAUI does not get in its way. The C# layer is thin: state management, event dispatching, reconnect logic. The audio engine operates below the JVM and below the .NET runtime regardless.
-
-**Kotlin + Gradle — extra JVM layer on top:**
-```kotlin
-// Kotlin compiles to JVM bytecode → Dalvik/ART
-// JIT on startup, GC pauses, warmup on first run
-
-lifecycleScope.launch {
-    viewModel.playbackState.collect { state ->
-        updateUI(state) // through LiveData → ViewModel → Coroutine → UI
-    }
-}
-```
-
-**C# / MAUI — AOT, no JVM:**
-```csharp
-// AOT compilation → native ARM binary, no JIT warmup
-// Events directly from the VLC engine, no intermediate layer
-
-_mediaPlayer.Playing += (_, _) =>
-    MainThread.BeginInvokeOnMainThread(() => UpdateUI(PlaybackState.Playing));
-```
-
-No ViewModel/LiveData/Coroutine stack = fewer layers between event and UI. Dispatching from a VLC thread to the Android main thread is one method call (`MainThread.BeginInvokeOnMainThread`), not a chain of reactive streams.
-
----
-
-### Dependencies: NuGet vs Gradle
-
-Kotlin and Gradle have a well-known dependency hell problem — transitive version conflicts cause build failures that are hard to diagnose without deep knowledge of the Gradle ecosystem.
-
-NuGet with explicit version pinning is deterministic: every dependency has exactly one version, conflicts are visible immediately, and resolved in a single `.csproj` file.
-
-**Gradle — transitive dependency version conflict:**
-```groovy
-// build.gradle — versions can be silently overridden by transitive deps
-// "Duplicate class kotlin.collections.jdk8" — classic hard-to-trace error
-dependencies {
-    implementation "androidx.media:media:1.7.1"
-    // Gradle pulls its own lifecycle versions — they may be incompatible
-}
-```
-
-**NuGet — explicit pinning, deterministic build:**
-```xml
-<!-- .csproj — all versions explicit, build is always reproducible -->
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Media" Version="1.7.1.2" />
-```
-
----
-
-### Summary
-
-.NET MAUI is not a compromise. It is a scalability choice: one codebase, native performance, a straightforward path to Windows and macOS, and no per-form-factor layout duplication. Kotlin and Gradle are the right choice if the target is Android phones and only ever Android phones. If the app needs to run correctly on tablets, desktops, Android Auto, and AAOS — and a desktop port is a realistic next step — MAUI eliminates that technical debt from the first commit.
+> **🧪 Beta Features:** Some features are currently in beta testing and will be available in the near future:
+> - **Cover Art** — automatic album art / station logo fetching and display
+> - **Reconstructor PLS** — advanced playlist merging tool (multi-load, dedup, drag-reorder, export)
+>
+> Both features are implemented and functional but are undergoing final testing before general availability.
 
 ---
 
@@ -317,6 +172,7 @@ This section documents the problems that had no answer in any official documenta
 If you are building a radio or audio app with this stack and hitting walls, this is for you.
 
 ---
+
 ### 1. LibVLC Native Thread Deadlock
 
 **The symptom**
@@ -507,7 +363,6 @@ private void SwitchStation(string url)
 
 ---
 
-
 ### 3. Foreground Service Crash on Android 12 / 12.1 (API 31–32)
 
 **The symptom**
@@ -609,18 +464,17 @@ private void StopForegroundCompat()
 
 ---
 
-
 ### 3.1. Station Edit, Add, Delete — Service Must Be Stopped First
 
-> **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a flat JSON file used as the station store. All station data is stored in JSON — one file, no schema, no migrations — read once at startup and not watched for runtime changes.
+> **Note:** This is a constraint specific to this application's architecture, discovered through real-device testing. It is not documented anywhere in MAUI or LibVLCSharp guides because it emerges from the combination of a live VLC stream, an Android foreground service holding a native media player instance in memory, and a flat JSON file used as the station store.
 
 **Why JSON, not a database**
 
-Station data is stored as a plain JSON file — one file, no schema, no migrations, no extra libraries. This was a deliberate design choice: the file is small, human-readable, directly editable, and trivially serialized with the built-in .NET JSON APIs. There is no SQLite dependency, no ORM, no database engine to initialize or version. For a list of internet radio URLs, a database would add complexity without adding value. The trade-off is that the file is read once at startup — it is not watched for changes at runtime. That constraint is what makes the rule below necessary.
+The station list is stored as a plain JSON file — one file, no schema, no migrations, no extra libraries. This was a deliberate design choice: the file is small, human-readable, directly editable, and trivially serialized with the built-in .NET JSON APIs. There is no SQLite dependency, no ORM, no database engine to initialize or version. For a list of internet radio URLs, a database would add complexity without adding value. The trade-off is that the file is read once at startup — it is not watched for changes at runtime. That constraint is what makes the rule below necessary.
 
 **The symptom**
 
-If you add, edit, or delete a station while the service is running and a stream is playing, the change is written to the station data file on disk — but the service is unaware of it. The service holds its own in-memory copy of the URL it received when playback started. That URL is also held inside the native LibVLC media player instance.
+If you add, edit, or delete a station while the service is running and a stream is playing, the change is written to `stacje.json` on disk — but the service is unaware of it. The service holds its own in-memory copy of the URL it received when playback started. That URL is also held inside the native LibVLC media player instance.
 
 The most visible case: deleting a station that is currently playing. After deletion the station no longer exists in the list or on disk, but VLC continues playing it from the URL it already has in memory. The stream does not stop. The station is gone from the UI but still audible. This was verified on a real device — the deleted station kept playing until the service was manually stopped.
 
@@ -632,7 +486,7 @@ The Android foreground service is a separate component with its own lifecycle. O
 2. The `title` string passed via `Intent` extras at startup
 3. The `MediaSession` metadata built from that title and URL
 
-None of these are updated when the station data file changes on disk. The service does not watch the file. It has no observer, no reload trigger, no notification mechanism. It only reads new data when a new `Intent` arrives with a new URL.
+None of these are updated when `stacje.json` changes on disk. The service does not watch the file. It has no observer, no reload trigger, no notification mechanism. It only reads new data when a new `Intent` arrives with a new URL.
 
 **The rule**
 
@@ -647,7 +501,6 @@ If this rule is not enforced and the user edits the URL of the currently playing
 This is not a design flaw that can be easily eliminated — it is a consequence of how Android foreground services and native media engines work. The service owns the native playback object. Injecting new state into a running native media engine mid-stream is not safe without a full stop-reinitialize-play cycle, which is effectively the same as stopping and restarting. Stopping the service before editing is the correct and safe approach.
 
 ---
-
 
 ### 4. MediaBrowserServiceCompat and Android Auto
 
@@ -722,7 +575,7 @@ public override void OnLoadChildren(string parentId, Result result)
     if (parentId == "__ROOT__")
     {
         // ✅ Root: one browsable folder — always visible regardless of page size
-        var iconUri = Android.Net.Uri.Parse($"android.resource://{PackageName}/drawable/app_icon");
+        var iconUri = Android.Net.Uri.Parse($"android.resource://{PackageName}/drawable/radio1");
         var categoryDesc = new MediaDescriptionCompat.Builder()
             .SetMediaId(BrowseIdAllStations)
             .SetTitle("All Stations")
@@ -865,8 +718,62 @@ public override void OnCreate()
 
 ---
 
+### 5. VLC Equalizer in .NET MAUI (LibVLCSharp)
 
-### 5. AudioFocus and UI/Service State Synchronization
+**Equalizer support in LibVLCSharp is functional but not fully documented.**
+Below is a practical guide for integrating and controlling the VLC equalizer in a .NET MAUI application.
+
+#### How it works
+
+LibVLC exposes the equalizer API via the `AudioEqualizer` and `MediaPlayer` classes. You can create an equalizer, set band gains, and assign it to the player.
+
+#### Example: Configuring the equalizer (10 bands in the UI)
+
+```csharp
+using LibVLCSharp.Shared;
+
+// Create equalizer instance
+var equalizer = new AudioEqualizer();
+
+// Set gain for each band (example values)
+equalizer.SetAmp(0, 3.0f); // Band 0: +3dB
+equalizer.SetAmp(1, -2.0f); // Band 1: -2dB
+// ... repeat for other bands as needed
+
+// Optionally set preamp
+equalizer.Preamp = 0.0f;
+
+// Assign equalizer to MediaPlayer
+mediaPlayer.SetEqualizer(equalizer);
+
+// To disable equalizer:
+mediaPlayer.SetEqualizer(null);
+```
+
+#### Practical notes
+
+- Band count and frequencies: Use `AudioEqualizer.BandCount` and `AudioEqualizer.GetBandFrequency(int band)` to query available bands and their frequencies.
+- You can create a custom UI (e.g. sliders) in MAUI and bind their values to `SetAmp(band, gain)`.
+- The equalizer can be changed at runtime; changes take effect immediately.
+- Always check for nulls and handle exceptions, especially when switching streams or disposing the player.
+
+#### Example: Displaying band frequencies
+
+```csharp
+for (int i = 0; i < AudioEqualizer.BandCount; i++)
+{
+    float freq = AudioEqualizer.GetBandFrequency(i);
+    Console.WriteLine($"Band {i}: {freq} Hz");
+}
+```
+
+**Tip:** Integrate equalizer controls in `EditStationPage.xaml` or a dedicated settings page for user adjustment.
+
+**Reference:** [LibVLCSharp AudioEqualizer API](https://code.videolan.org/videolan/LibVLCSharp/-/blob/master/LibVLCSharp/AudioEqualizer.cs)
+
+---
+
+### 6. AudioFocus and UI/Service State Synchronization
 
 This is one of the hardest problems in Android audio development in general — and significantly harder in .NET MAUI than in Kotlin, where the platform provides first-class tools for exactly this scenario.
 
@@ -915,22 +822,23 @@ None of these are handled by the framework. Each one is a deliberate decision in
 
 ---
 
+### 6.1. Favorites — Multi-Surface State Synchronization
 
-### 5.1. Favorites — Multi-Surface State Synchronization
+> **Status: shipped — favorites are a standard feature of the app.**
+>
+> Favorites went through extended private testing precisely because of the synchronization complexity documented in this section and section 6.2 — five separate surfaces that must all agree on the same state, across a background service, system notification, Android Auto queue, Bluetooth media session, and two UI pages, with no built-in platform mechanism to coordinate them. What looks like a simple star button required a significant amount of careful engineering to get right on every surface. It is now stable and enabled by default.
 
-> **Note:** Favorites are implemented and fully working in the current test version. A freemium release offering this feature as a paid upgrade is planned for the future. The synchronization complexity described here — five separate surfaces that must all agree on the same state — is the primary reason this feature required dedicated engineering rather than a simple star toggle.
-
-Favorites look simple from the outside
+Favorites look simple from the outside: mark a station with a star, filter to show only favorites, navigate between them. The implementation turned out to be one of the more subtle synchronization problems in the app — touching five separate surfaces that all need to agree on the same state. This pattern applies to any MAUI app where a shared boolean state must be reflected across a background service, system notifications, and multiple UI pages simultaneously — and where the platform provides no built-in mechanism (like LiveData or ViewModel) to do it automatically.
 
 **The five surfaces that consume favorite state**
 
 | Surface | What it shows |
 |---|---|
-| Radio Page (player UI) | `★` indicator next to the station name when current station is a favorite |
-| Stations List tab | Per-station `★` toggle button — the only place where favorites are added or removed; a separate toolbar `★` button filters navigation to favorites-only |
+| Radio Page (player UI) | `★` indicator next to the station name when current station is a favorite; `☆/★` filter button to toggle favorites-only navigation |
+| Stations List tab | Per-station `★` toggle button — the only place where favorites are added or removed |
 | System notification popup | Station title prefixed with `★` when the currently playing station is a favorite |
-| Android Auto queue | Queue filtered to favorites-only when the filter is active; reloads the station list from JSON storage before every queue rebuild; falls back to full list if no favorites exist; calls `NotifyChildrenChanged()` on every favorite toggle so AA re-requests the queue |
-| Bluetooth / lockscreen media session | Title metadata prefixed with `★`; updated via `SetMetadata()` every time the playback service starts a new station or the favorite state changes |
+| Android Auto queue | Queue filtered to favorites-only when the filter is active; falls back to full list if no favorites exist |
+| Bluetooth / lockscreen media session | Title metadata prefixed with `★` |
 
 **The split of responsibilities — why it matters**
 
@@ -940,7 +848,7 @@ The consequence: when the filter is ON, drag-and-drop reordering in the station 
 
 **Stale state problem**
 
-The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the JSON store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
+The station list is held in memory in both the UI and the background service. If the user edits favorites and then navigates or starts playback, the in-memory list may have stale favorite values. The fix: every component that consumes favorite state always reloads the station list from the persisted store before acting on it — the UI before navigation, the service before rebuilding the queue, the notification layer before rendering the title.
 
 **Empty favorites fallback**
 
@@ -952,12 +860,11 @@ A shared `CurrentStationIsFavorite` flag is the signal between the UI, the servi
 
 **Filter state persistence**
 
-The filter toggle state is persisted in JSON-backed settings so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker. The favorite flag itself is part of each station record in the JSON station store — no separate favorites database.
+The filter toggle state is persisted so it survives app restarts. The player page restores it before the first UI update — so the filter button reflects the last-used state immediately, without a flicker.
 
 ---
 
-
-### 5.2. Android Auto + Favorites — Synchronization Problem and Solution
+### 6.2. Android Auto + Favorites — Synchronization Problem and Solution
 
 Android Auto is the surface where the favorites filter was hardest to get right. Unlike the phone UI — where toggling the filter simply re-filters an in-memory list — AA has its own lifecycle and its own model for displaying and highlighting media content. Every surface involved (queue list, active item highlight, filter toggle) required a separate fix.
 
@@ -1003,122 +910,55 @@ Fix: every filter toggle and every favorites add/remove now sends a signal to th
 
 ---
 
+### 6.3. Reconstructor PLS — CollectionView Reorder & the Switch Echo Trap
 
-### 6. LibVLCSharp Memory Safety Checklist
+> **🧪 Beta:** This feature is currently in beta testing and will be available in the near future.
 
-This checklist consolidates the native memory safety rules from sections 1 and 2 into a single quick-reference for code reviews and new contributors. Every rule here has a corresponding crash or deadlock in the project's history.
+**What it is**
 
-**Threading rules — VLC event callbacks**
+Reconstructor PLS (PLS tab → Reconstructor) builds a brand-new playlist out of stations that already live inside playlists the user saved earlier. It does not create stations from scratch — it reuses streams. The user can load **several** saved `.json`/`.pls` files at once; all their streams are merged into one list, duplicates by name are dropped, the user ticks the ones to keep, drags them into any order, and exports a new `.json` + `.pls` pair. The practical value: receive playlists from other people via share, then recombine them freely. This section documents two MAUI gotchas that surfaced while building it.
 
-| Rule | Why |
-|---|---|
-| Never call `Stop()`, `Play()`, or `Media = X` inside a VLC event handler | VLC holds native mutexes during event dispatch — re-entry deadlocks the engine permanently |
-| Always dispatch to thread pool first: `Task.Run(() => ...)` or `ThreadPool.QueueUserWorkItem` | Gets off the native pthread before any VLC call |
-| Never dispatch to UI thread as a substitute — call VLC from UI thread only if no VLC event is in progress | UI thread dispatch does not release the native mutex |
-| `Playing`, `Paused`, `Stopped` callbacks may run directly only if they make **no VLC calls** | State-read-only callbacks are safe; any VLC method call is not |
+**Gotcha 1 — drag-to-reorder needs an `ObservableCollection`, and no auto-sorting**
 
-**Native memory rules — Media object lifecycle**
+`CollectionView` supports native drag reordering via `CanReorderItems="True"` — but only when the bound source is an `ObservableCollection<T>` (a plain `List<T>` will not reorder in place). The same proven pattern is used in the station list (`StacjePage`): `CanReorderItems` plus an optional `ReorderCompleted` handler.
 
-| Rule | Why |
-|---|---|
-| Cancel `_metaPollCts` before `Media = null` | Polling loop holds a reference to native media memory; cancelling stops access before free |
-| Detach `MetaChanged` event handler before `Media = null` | Event handler fired after free = SIGSEGV |
-| Null `_currentMediaForMeta` before `Media = null` | Prevents any deferred access via cached reference |
-| `Thread.Sleep(50)` after cancel, before free | LibVLC has a known native micro-freeze during teardown; 50ms lets the polling loop observe cancellation before native memory is released |
-| Call `oldMedia?.Dispose()` explicitly after `Media = null` | GC does not manage native memory — dispose must be explicit |
-| Never access `Media.Meta()` after `MediaPlayer.Media` has been replaced or nulled | The C# wrapper may be non-null while native memory is already freed |
-
-**Cleanup ordering — must be followed in every reset path**
-
-This sequence must be applied in `PlayRadio`, `StopRadio`, `HardResetVlc`, and `OnDestroy`:
-
-```
-1. _metaPollCts?.Cancel()                    ← stop polling
-2. _currentMediaForMeta.MetaChanged -= ...   ← detach handler
-3. _currentMediaForMeta = null               ← clear cached ref
-4. Thread.Sleep(50)                          ← wait for native teardown
-5. MediaPlayer.Stop()                        ← stop engine
-6. var old = MediaPlayer.Media
-7. MediaPlayer.Media = null                  ← free native memory
-8. old?.Dispose()                            ← explicit native dispose
-```
-
-**Play→Stop→Play race guard**
-
-| Rule | Why |
-|---|---|
-| Check `lock (_commandGate) { if (_isStartingPlayback) return; }` inside the `Stopped` callback | Late VLC `Stopped` events arrive after new playback has already started — without the guard they reset `IsPlaying = false` and corrupt new playback state |
-| Set `_isStartingPlayback = true` before `Play()`, clear it after the Playing event fires | Marks the window during which late Stopped events must be ignored |
-
-**Quick diagnostic — which crash pattern is which**
-
-| Symptom | Likely cause | Section |
-|---|---|---|
-| App freezes, no crash, no log, audio thread stuck | VLC deadlock — VLC method called inside event handler | §1 |
-| `SIGSEGV` in native LibVLC stack, intermittent | Use-after-free — Media accessed after `Media = null` | §2 |
-| `ForegroundServiceDidNotStartInTimeException` on Android 12 | `StartForeground()` not called immediately in `OnStartCommand` | §3 |
-| Play→Stop→Play: second Play shows stopped state | Late `Stopped` event — missing `_isStartingPlayback` guard | §2 |
-| Metadata shows stale station name after switch | `_currentMediaForMeta` not nulled before switch | §2 |
-
----
-
-### 7. VLC Equalizer in .NET MAUI (LibVLCSharp)
-
-**Equalizer support in LibVLCSharp is functional but not fully documented.**
-Below is a practical guide for integrating and controlling the VLC equalizer in a .NET MAUI application.
-
-#### How it works
-
-LibVLC exposes the equalizer API via the `AudioEqualizer` and `MediaPlayer` classes. You can create an equalizer, set band gains, and assign it to the player.
-
-#### Example: Configuring the equalizer (9 bands in the UI, up to 10 supported by VLC)
+A deliberate product decision compounds this: the merged list is **never sorted automatically** (not alphabetically, not by source). The load order is preserved and the user arranges everything by hand. The app's guiding principle is "no restrictions — the user decides the order." Because the export step writes items in their current collection order, the user's arrangement flows into the saved file for free.
 
 ```csharp
-using LibVLCSharp.Shared;
+// Skeleton — structure only
+private ObservableCollection<SelectableStacja> _items = new();   // not List<T>
 
-// Create equalizer instance
-var equalizer = new AudioEqualizer();
-
-// Set gain for each band (example values)
-equalizer.SetAmp(0, 3.0f); // Band 0: +3dB
-equalizer.SetAmp(1, -2.0f); // Band 1: -2dB
-// ... repeat for other bands as needed
-
-// Optionally set preamp
-equalizer.Preamp = 0.0f;
-
-// Assign equalizer to MediaPlayer
-mediaPlayer.SetEqualizer(equalizer);
-
-// To disable equalizer:
-mediaPlayer.SetEqualizer(null);
+// XAML: <CollectionView CanReorderItems="True" ItemsSource="{...}">
+// On load: merge files, dedup by name, NO OrderBy — keep load order.
 ```
 
-#### Practical notes
+**Gotcha 2 — the `Switch` echo trap (a master "Select all" toggle)**
 
-- Band count and frequencies: Use `AudioEqualizer.BandCount` and `AudioEqualizer.GetBandFrequency(int band)` to query available bands and their frequencies.
-- You can create a custom UI (e.g. sliders) in MAUI and bind their values to `SetAmp(band, gain)`.
-- The equalizer can be changed at runtime; changes take effect immediately.
-- Always check for nulls and handle exceptions, especially when switching streams or disposing the player.
+A single `Switch` acts as a master "select all / clear all". The naive implementation — flip every item in the `Toggled` handler, and write the switch back to reflect "are all selected?" — creates a feedback loop, because **setting `Switch.IsToggled` in code raises the `Toggled` event again**. On Android this echo can fire **asynchronously**, so a synchronous "suppress" flag set around the assignment is already cleared by the time the echo arrives. The echoed `Toggled(false)` is then treated as a real user command and clears the whole selection — the switch visibly "springs back and deselects everything."
 
-#### Example: Displaying band frequencies
+The robust fix does not rely on timing. The handler acts **only when the requested value differs from the current reality**; any echo (where the value already matches reality) is ignored. This is immune to whether `Toggled` fires synchronously or asynchronously.
 
 ```csharp
-for (int i = 0; i < AudioEqualizer.BandCount; i++)
+// Skeleton — the echo-proof master toggle
+private void OnSelectAllToggled(object sender, ToggledEventArgs e)
 {
-    float freq = AudioEqualizer.GetBandFrequency(i);
-    Console.WriteLine($"Band {i}: {freq} Hz");
+    bool allSelected = _items.Count > 0 && _items.All(s => s.IsSelected);
+    if (e.Value == allSelected) return;   // echo from programmatic sync → ignore
+
+    foreach (var it in _items) it.IsSelected = e.Value;   // real user intent
+    UpdateSelCount();                                     // refresh label + switch
 }
 ```
 
-**Tip:** Equalizer settings are saved automatically when the app exits and restored on the next launch. EQ profiles can also be exported and imported as JSON files — this feature is implemented and working in the current test version. A freemium release offering EQ profile save/load as a paid upgrade is planned for the future.
+Two supporting details: the item model implements `INotifyPropertyChanged` on `IsSelected` so the per-row `CheckBox` updates when the master toggle flips it; and a bulk-update guard skips the per-item count refresh during the mass flip so the switch is reconciled once, not N times.
 
-**Reference:** [LibVLCSharp AudioEqualizer API](https://code.videolan.org/videolan/LibVLCSharp/-/blob/master/LibVLCSharp/AudioEqualizer.cs)
+> **The general lesson:** any time you write a control's value back to "reflect state" while the same control raises an event on change, assume the event can re-enter — and on Android, assume it can re-enter *asynchronously*. Guard by comparing intent to reality, not with a synchronous suppress flag.
 
 ---
 
+### 7. AAOS Album Art
 
-### 8. AAOS Album Art
+> **🧪 Beta:** Cover art / album art fetching is currently in beta testing and will be available in the near future.
 
 **The symptom**
 
@@ -1136,7 +976,7 @@ This is not documented in a single clear place. The Android developer docs menti
 
 ```csharp
 // ❌ Bitmap-only — BT and AA display it, AAOS ignores it
-var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.app_icon);
+var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.radio1);
 var metadata = new MediaMetadataCompat.Builder()
     .PutString(MediaMetadataCompat.MetadataKeyTitle, stationName)
     .PutString(MediaMetadataCompat.MetadataKeyArtist, artist)
@@ -1151,8 +991,8 @@ Set both Bitmap (for BT/AA) and URI (for AAOS). The URI must use the `android.re
 
 ```csharp
 // ✅ Bitmap + URI — covers all three platforms
-var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.app_icon);
-var artUri = $"android.resource://{PackageName}/drawable/app_icon";
+var bitmap = BitmapFactory.DecodeResource(Resources, Resource.Drawable.radio1);
+var artUri = $"android.resource://{PackageName}/drawable/radio1";
 
 var metadata = new MediaMetadataCompat.Builder()
     .PutString(MediaMetadataCompat.MetadataKeyTitle, stationName)
@@ -1175,7 +1015,7 @@ There are two `android.resource://` URI formats:
 | Format | Example | AAOS |
 |---|---|---|
 | Integer resource ID | `android.resource://com.myapp/2131230856` | ❌ Some AAOS builds fail to resolve this |
-| Type/name | `android.resource://com.myapp/drawable/app_icon` | ✅ Works reliably across AAOS builds |
+| Type/name | `android.resource://com.myapp/drawable/radio1` | ✅ Works reliably across AAOS builds |
 
 Always use the `type/name` format. The integer format is technically valid but has been observed to fail on certain AAOS emulator builds and real car head units.
 
@@ -1185,7 +1025,7 @@ The MediaSession metadata fix covers the "now playing" screen. But AAOS also dis
 
 ```csharp
 // Browse tree items (OnLoadChildren → CreateStation)
-var iconUri = $"android.resource://{PackageName}/drawable/app_icon";
+var iconUri = $"android.resource://{PackageName}/drawable/radio1";
 var metadata = new MediaMetadataCompat.Builder()
     .PutString(MediaMetadataCompat.MetadataKeyMediaId, id)
     .PutString(MediaMetadataCompat.MetadataKeyTitle, name)
@@ -1199,7 +1039,7 @@ return new MediaBrowserCompat.MediaItem(
 
 // Queue items (BuildQueueItems)
 var iconAndroidUri = Android.Net.Uri.Parse(
-    $"android.resource://{PackageName}/drawable/app_icon");
+    $"android.resource://{PackageName}/drawable/radio1");
 var desc = new MediaDescriptionCompat.Builder()
     .SetMediaId(mediaId)
     .SetTitle(stationName)
@@ -1235,16 +1075,11 @@ var builder = new Notification.Builder(this, channelId)
 
 ---
 
-
-### 9. Google Play AAOS Distribution — Why the APK Works but the Store Rejects It
+### 8. Google Play AAOS Distribution — Why the APK Works but the Store Rejects It
 
 **The situation**
 
-The app runs correctly on an AAOS emulator. A manually sideloaded APK works on a real car head unit. Yet Google Play Console rejects the submission — the pre-launch report either fails the automotive review, the app is blocked from the AAOS track, or the store never surfaces it on automotive devices. No crash, no runtime error. Everything functional. Just a blocked store listing.
-
-This is a common experience for developers porting .NET MAUI apps to AAOS. The reason is that **Google Play has a separate and strict requirements layer for AAOS distribution** that is entirely independent of whether the app works at runtime. The APK/AAB is validated against a checklist of metadata, manifest declarations, and structural requirements before it is ever installed or tested on a real device. If any item is missing, the submission is rejected silently or the app simply does not appear on the automotive track.
-
-This section documents every known requirement that must be satisfied for a .NET MAUI media app to pass Google Play's AAOS review.
+The app runs correctly on an AAOS emulator and a sideloaded APK works on a real car head unit — yet Google Play Console rejects the submission. No crash, no runtime error; just a blocked listing. The reason: **Google Play validates the AAB against a separate checklist of automotive metadata, manifest declarations, and structural requirements before it is ever installed.** If any item is missing, the submission is rejected silently or never appears on the automotive track. This section documents every requirement a .NET MAUI media app must satisfy to pass that review.
 
 ---
 
@@ -1378,8 +1213,9 @@ In `.csproj`:
 
 ```xml
 <PropertyGroup>
+    <ApplicationId>com.yourpackage.radioandroid</ApplicationId>
     <SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
-    <TargetSdkVersion>36</TargetSdkVersion>
+    <TargetSdkVersion>35</TargetSdkVersion>
 </PropertyGroup>
 ```
 
@@ -1432,11 +1268,7 @@ To target this track, the AAB must have `android.hardware.type.automotive` decla
 
 #### Why this is harder in .NET MAUI than in Kotlin
 
-In a native Kotlin/Gradle project, the Android Studio "Automotive" template adds all of the above automatically: the descriptor XML, the manifest entries, the correct service declaration, the `targetSdkVersion` — all pre-configured and validated by the IDE. Android Studio warns you at build time if anything is missing.
-
-In .NET MAUI, none of this is automated. The MAUI tooling knows nothing about automotive. Every manifest entry, every XML resource, every packaging flag is the developer's responsibility. There is no "automotive" template, no lint warning for a missing descriptor, no IDE validation. The first sign that something is missing is a Play Console rejection — after an upload, a signing and alignment pass, and a manual review queue wait.
-
-The requirements listed in this section were discovered through that process — not through documentation, but through rejections.
+In a native Kotlin/Gradle project, the Android Studio "Automotive" template adds all of the above automatically and warns at build time if anything is missing. In .NET MAUI none of this is automated — every manifest entry, XML resource, and packaging flag is the developer's responsibility, with no template, no lint warning, and no IDE validation. The first sign something is missing is a Play Console rejection, after the upload and review-queue wait. The requirements in this section were discovered through that process, not through documentation.
 
 ---
 
@@ -1456,8 +1288,7 @@ The requirements listed in this section were discovered through that process —
 
 ---
 
-
-### 10. Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)
+### 9. Android Automotive OS — Why the Port Was Abandoned (Automotive Content Policy)
 
 Meeting all the technical requirements documented in section 8 above — the descriptor file, the manifest declarations, the correct `MediaBrowserService` binding, the AAB format, the URI-based album art — is necessary but not sufficient for passing Google Play's AAOS certification.
 
@@ -1465,11 +1296,9 @@ Meeting all the technical requirements documented in section 8 above — the des
 
 #### Why Android Auto passes but AAOS does not
 
-The app ships with **four built-in starter stations** that are always present on a fresh install. This is enough for Android Auto certification — the browsable content tree is not empty, the review robot finds stations in `OnLoadChildren`, and the AA review passes.
+Android Auto runs the media app on the **user's phone**, with the head unit as a display client. Content management — adding stations, editing URLs — happens on the phone screen, outside driving mode, which AA policy allows. The five built-in starter stations also keep the browse tree non-empty, so the review robot finds content in `OnLoadChildren` and the AA review passes.
 
-Android Auto also operates in a fundamentally different model: the media app runs on the **user's phone**, and the head unit is a display client. Content management — adding stations, editing URLs — happens on the phone screen, outside driving mode. AA policy allows this because the interaction takes place on the companion device, not on the car's display.
-
-Android Automotive OS is different. AAOS is a **standalone system** built into the car — there is no companion phone. Every user interaction happens on the car's screen, and every action is therefore subject to the Automotive UI restrictions that apply while the vehicle is in motion.
+Android Automotive OS is a **standalone system** built into the car — no companion phone. Every interaction happens on the car's screen, subject to the Automotive UI restrictions that apply while the vehicle is in motion.
 
 #### The blocking AAOS UI policy
 
@@ -1481,12 +1310,12 @@ Google's Automotive UI guidelines prohibit, while the vehicle is moving:
 
 Adding a station in RadioAndroid requires typing a station name and a stream URL. This is the core user action the app is built around. On AAOS, this action is categorically prohibited by policy. There is no compliant way to implement it on the car's screen.
 
-#### Why the four starter stations do not solve it
+#### Why the five starter stations do not solve it
 
-The four default stations satisfy the "content present at install" requirement and are enough to pass the AA review. They do not satisfy the AAOS requirement because:
+The five default stations satisfy the "content present at install" requirement and are enough to pass the AA review. They do not satisfy the AAOS requirement because:
 
 - AAOS certification reviewers evaluate whether the app's primary functionality is accessible on the car screen in a policy-compliant way — not just whether something plays
-- A user who wants to listen to any station outside those four defaults has no compliant path to add it on AAOS
+- A user who wants to listen to any station outside those five defaults has no compliant path to add it on AAOS
 - The app's value proposition — *play any internet radio stream you choose* — is irreconcilable with a policy that prohibits the input actions needed to choose a stream
 
 **Conclusion: the port to Android Automotive OS was abandoned.**
@@ -1495,7 +1324,7 @@ The app functions correctly on AAOS at a technical level — playback, media ses
 
 | Requirement | Android Auto | Android Automotive OS |
 |---|---|---|
-| Browsable content present at install | ✅ Four starter stations | ✅ Four starter stations |
+| Browsable content present at install | ✅ Five starter stations | ✅ Five starter stations |
 | Content management (adding stations) | ✅ Done on phone screen — outside driving mode | ❌ Must happen on car screen — text input prohibited |
 | User can access any stream they choose | ✅ Add stations on phone, play in car | ❌ No compliant way to add stations on AAOS screen |
 | Certification result | ✅ Passed Google Play AA review | ❌ Port abandoned — policy incompatibility |
@@ -1506,104 +1335,61 @@ A workaround would require either a server-side station catalog (turning the app
 
 ---
 
+### 10. LibVLCSharp Memory Safety Checklist
 
----
+This checklist consolidates the native memory safety rules from sections 1 and 2 into a single quick-reference for code reviews and new contributors. Every rule here has a corresponding crash or deadlock in the project's history.
 
-### 11. Google Play In-App Purchases — One-Time Payment in .NET 10
-
-**Google Play Billing in .NET 10 — the library situation**
-
-Implementing Google Play Billing in a .NET MAUI app is not straightforward. The official Google Play Billing Library is a Java/Kotlin library. In a native Android project it is added as a Gradle dependency and used directly. In .NET MAUI there is no official NuGet wrapper.
-
-**The available options in .NET 10:**
-
-| Approach | Status |
-|---|---|
-| Official Google Play Billing Library (Java/Kotlin) | No official C# bindings |
-| `Xamarin.Google.Android.Play.Billing` | Available on NuGet — community-maintained Xamarin bindings |
-| `Plugin.InAppBilling` | Popular MAUI/Xamarin plugin — wraps the billing library for C# |
-| Direct JNI calls | Possible but fragile and maintenance-intensive |
-
-This project uses **`Plugin.InAppBilling`** — the most practical option for .NET MAUI. It wraps the Google Play Billing Library with a clean C# async API and handles the connection lifecycle, purchase verification flow, and acknowledgement that the native library requires.
-
-```xml
-<PackageReference Include="Plugin.InAppBilling" Version="7.1.1" />
-```
-
----
-
-**The dependency problem — AndroidX conflict**
-
-Adding `Plugin.InAppBilling` introduced a build conflict. The plugin has transitive dependencies on `Xamarin.Google.Android.Play.Billing` and several AndroidX packages. These conflicted with the AndroidX Lifecycle packages already pinned for `Xamarin.AndroidX.Media` (Android Auto support).
-
-The symptom was a familiar one: `Duplicate class` errors at build time — the same classes appearing from two different NuGet packages at two different versions. In a Gradle project this is resolved automatically by the dependency resolver. In NuGet it requires explicit pins.
-
-The fix was to extend the existing Lifecycle pinning block with the additional packages that `Plugin.InAppBilling` pulled in transitively:
-
-```xml
-<!-- Billing library -->
-<PackageReference Include="Plugin.InAppBilling" Version="7.1.1" />
-
-<!-- Extended AndroidX pins to resolve conflicts introduced by billing -->
-<PackageReference Include="Xamarin.Google.Android.Play.Billing" Version="7.1.1" />
-<PackageReference Include="Xamarin.AndroidX.Activity" Version="1.10.1.1" />
-<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.10.1.1" />
-<PackageReference Include="Xamarin.AndroidX.Fragment" Version="1.8.7.1" />
-<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.8.7.1" />
-```
-
-The general rule: every time a new Android-targeting NuGet package is added to a .NET MAUI project that already has AndroidX pinning, check for new transitive conflicts immediately. The build error is always the same (`Duplicate class`), and the fix is always the same (explicit pin at the version the new package needs).
-
----
-
-**How the billing flow works**
-
-The purchase flow uses the `Plugin.InAppBilling` async API and runs on the Android main thread (required by Google Play Billing):
-
-```csharp
-// Check if already purchased (on app start)
-var billing = CrossInAppBilling.Current;
-await billing.ConnectAsync();
-var purchases = await billing.GetPurchasesAsync(ItemType.InAppPurchase);
-bool isPro = purchases?.Any(p =>
-    p.ProductId == "your_product_id" &&
-    p.State == PurchaseState.Purchased) ?? false;
-await billing.DisconnectAsync();
-
-// Initiate purchase
-await billing.ConnectAsync();
-var purchase = await billing.PurchaseAsync("your_product_id", ItemType.InAppPurchase);
-if (purchase?.State == PurchaseState.Purchased)
-{
-    // Acknowledge the purchase — required, or Google will refund after 3 days
-    await billing.FinalizePurchaseAsync(purchase.PurchaseToken);
-    // Unlock features
-}
-await billing.DisconnectAsync();
-```
-
-**Key rules for Google Play Billing in .NET MAUI:**
+**Threading rules — VLC event callbacks**
 
 | Rule | Why |
 |---|---|
-| Always call `ConnectAsync()` before any billing operation | The billing library requires an active connection to the Play Store service |
-| Always call `DisconnectAsync()` when done | Leaving the connection open drains battery and may cause ANR on app exit |
-| Acknowledge every purchase with `FinalizePurchaseAsync()` | Unacknowledged purchases are automatically refunded by Google after 72 hours |
-| Restore purchases on every app start | The user may reinstall, change device, or clear app data — purchases are tied to the Google account, not the device |
-| Handle `BillingException` — do not let it crash the app | Network issues, Play Store unavailable, and user cancellation all surface as exceptions |
-| Never grant features before acknowledgement | Only grant access after the purchase state is `Purchased` and the token is acknowledged |
+| Never call `Stop()`, `Play()`, or `Media = X` inside a VLC event handler | VLC holds native mutexes during event dispatch — re-entry deadlocks the engine permanently |
+| Always dispatch to thread pool first: `Task.Run(() => ...)` or `ThreadPool.QueueUserWorkItem` | Gets off the native pthread before any VLC call |
+| Never dispatch to UI thread as a substitute — call VLC from UI thread only if no VLC event is in progress | UI thread dispatch does not release the native mutex |
+| `Playing`, `Paused`, `Stopped` callbacks may run directly only if they make **no VLC calls** | State-read-only callbacks are safe; any VLC method call is not |
 
----
+**Native memory rules — Media object lifecycle**
 
-**Purchase verification — server-side vs client-side**
+| Rule | Why |
+|---|---|
+| Cancel `_metaPollCts` before `Media = null` | Polling loop holds a reference to native media memory; cancelling stops access before free |
+| Detach `MetaChanged` event handler before `Media = null` | Event handler fired after free = SIGSEGV |
+| Null `_currentMediaForMeta` before `Media = null` | Prevents any deferred access via cached reference |
+| `Thread.Sleep(50)` after cancel, before free | LibVLC has a known native micro-freeze during teardown; 50ms lets the polling loop observe cancellation before native memory is released |
+| Call `oldMedia?.Dispose()` explicitly after `Media = null` | GC does not manage native memory — dispose must be explicit |
+| Never access `Media.Meta()` after `MediaPlayer.Media` has been replaced or nulled | The C# wrapper may be non-null while native memory is already freed |
 
-`Plugin.InAppBilling` returns a purchase token that can be verified against the Google Play Developer API server-side. For a single-developer app without a backend, client-side verification is practical:
+**Cleanup ordering — must be followed in every reset path**
 
-- The purchase state is `Purchased` (not `Pending`)
-- The token is acknowledged within 72 hours
-- The product ID matches the expected SKU
+This sequence must be applied in `PlayRadio`, `StopRadio`, `HardResetVlc`, and `OnDestroy`:
 
-For a production app with a server: send the token to your backend, verify it against the Google Play Developer API, and only grant features after the backend confirms the purchase is valid and not previously used. Client-side verification is acceptable for low-fraud-risk features; server-side is required for anything with real monetary value or where replay attacks matter.
+```
+1. _metaPollCts?.Cancel()                    ← stop polling
+2. _currentMediaForMeta.MetaChanged -= ...   ← detach handler
+3. _currentMediaForMeta = null               ← clear cached ref
+4. Thread.Sleep(50)                          ← wait for native teardown
+5. MediaPlayer.Stop()                        ← stop engine
+6. var old = MediaPlayer.Media
+7. MediaPlayer.Media = null                  ← free native memory
+8. old?.Dispose()                            ← explicit native dispose
+```
+
+**Play→Stop→Play race guard**
+
+| Rule | Why |
+|---|---|
+| Check `lock (_commandGate) { if (_isStartingPlayback) return; }` inside the `Stopped` callback | Late VLC `Stopped` events arrive after new playback has already started — without the guard they reset `IsPlaying = false` and corrupt new playback state |
+| Set `_isStartingPlayback = true` before `Play()`, clear it after the Playing event fires | Marks the window during which late Stopped events must be ignored |
+
+**Quick diagnostic — which crash pattern is which**
+
+| Symptom | Likely cause | Section |
+|---|---|---|
+| App freezes, no crash, no log, audio thread stuck | VLC deadlock — VLC method called inside event handler | §1 |
+| `SIGSEGV` in native LibVLC stack, intermittent | Use-after-free — Media accessed after `Media = null` | §2 |
+| `ForegroundServiceDidNotStartInTimeException` on Android 12 | `StartForeground()` not called immediately in `OnStartCommand` | §3 |
+| Play→Stop→Play: second Play shows stopped state | Late `Stopped` event — missing `_isStartingPlayback` guard | §2 |
+| Metadata shows stale station name after switch | `_currentMediaForMeta` not nulled before switch | §2 |
 
 ---
 
@@ -1614,8 +1400,13 @@ For a production app with a server: send the token to your backend, verify it ag
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                        UI Layer                             │
-│  - RadioPage.xaml, StacjePage.xaml                           │
-│  - EditStacjaPage.xaml, EditStationPage.xaml                  │
+│  - RadioPage.xaml          — main player                    │
+│  - StacjePage.xaml         — station list                   │
+│  - EditStacjaPage.xaml     — add/edit/delete station        │
+│  - EditStationPage.xaml    — 10-band EQ editor              │
+│  - ExportImportPLSPage.xaml — PLS playlists & EQ            │
+│  - CreatorPlsPage.xaml     — Reconstructor PLS (beta)       │
+│  - HelpPage.xaml + 4 context help screens                   │
 │  - User interaction: Play, Stop, Next, Prev, station select  │
 └───────────────▲──────────────────────────────────────────────┘
                 │
@@ -1623,15 +1414,18 @@ For a production app with a server: send the token to your backend, verify it ag
                 ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                App Logic / MVVM Layer                       │
-│  - RadioStateService.cs, StacjaService.cs, SettingsService  │
-│  - Holds playback state, playlist, settings                 │
+│  - RadioStateService.cs    — live playback state            │
+│  - StacjaService.cs        — station selection bridge       │
+│  - SettingsService.cs      — JSON-backed settings           │
+│  - SkinService.cs          — background skin state          │
+│  - StationLogoService.cs   — cover art fetching (beta)      │
 └───────────────▲──────────────────────────────────────────────┘
                 │
                 │  (state changes, notifications)
                 ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                Playback Service Layer                       │
-│  - AudioPlaybackService.cs (+ partials)                     │
+│  - AudioPlaybackService.cs (+ 7 partials)                   │
 │  - Responsible for:                                         │
 │    • Playback (LibVLC)                                      │
 │    • Foreground Service (Android)                           │
@@ -1676,26 +1470,37 @@ RadioAndroid/
 │   │   ├── StacjePage.xaml.cs      — Station list logic (add/remove favorites, reorder, drag-drop)
 │   │   ├── EditStacjaPage.xaml     — Single station edit form (name + URL)
 │   │   ├── EditStacjaPage.xaml.cs  — Single station edit logic (Save / Delete)
-│   │   ├── EditStationPage.xaml    — 9-band equalizer (sliders, reset, save/load EQ profiles as JSON)
-│   │   ├── EditStationPage.xaml.cs — EQ logic (profile save/load, apply to player)
-│   │   ├── ExportImportPLSPage.xaml    — Playlist import/export page (JSON + PLS format)
-│   │   ├── ExportImportPLSPage.xaml.cs — Playlist import/export logic
-│   │   ├── PremiumPopup.xaml       — PRO purchase popup (CommunityToolkit Popup)
-│   │   ├── PremiumPopup.xaml.cs    — PRO purchase popup logic
+│   │   ├── EditStationPage.xaml    — 10-band EQ editor (Save / Load / Reset preset)
+│   │   ├── EditStationPage.xaml.cs — EQ logic
+│   │   ├── ExportImportPLSPage.xaml    — PLS tab: Save / Load / Share playlists & EQ, Reconstructor entry
+│   │   ├── ExportImportPLSPage.xaml.cs — Playlist import/export/share logic
+│   │   ├── CreatorPlsPage.xaml         — Reconstructor PLS: merge saved playlists into a new one
+│   │   ├── CreatorPlsPage.xaml.cs      — Reconstructor logic (multi-load, dedup, reorder, select-all)
 │   │   ├── HelpPage.xaml           — User guide
-│   │   └── HelpPage.xaml.cs        — User guide logic
+│   │   ├── HelpPage.xaml.cs        — User guide logic
+│   │   └── HelpReconstructorPlsPage.xaml / HelpPageAddStations / HelpPageEQ / HelpPagePLS — context help screens
 │   ├── Services/
 │   │   ├── RadioStateService.cs    — Shared playback/favorites state (INotifyPropertyChanged)
 │   │   ├── StacjaService.cs        — Station selection event bridge (UI → service)
 │   │   ├── SettingsService.cs      — Persisted user settings (JSON-backed)
-│   │   └── PremiumService.cs       — PRO purchase state (Plugin.InAppBilling wrapper, restore on start)
+│   │   └── StationLogoService.cs   — Cover art / station logo fetching (beta)
 │   ├── Models/
 │   │   ├── Stacja.cs               — Station model (name + URL + IsFavorite)
-│   │   └── StacjaViewModel.cs      — ViewModel for station list binding
+│   │   ├── StacjaViewModel.cs      — ViewModel for station list binding
+│   │   └── SkinPreset.cs           — Skin preset data model (StartHex, EndHex, DotsArgbHex, optional VU block)
 │   └── Helpers/
+│       ├── SkinService.cs          — Singleton: owns active skin state, applies LinearGradientBrush to page background
 │       ├── ToastHelper.cs          — Native Android toast wrapper
-│       └── PlaybackHelper.cs       — Playback utility methods (AA queue refresh, etc.)
+│       ├── PlaybackHelper.cs       — Playback utility methods (AA queue refresh, etc.)
+│       ├── BgDotsDrawable.cs       — IDrawable: dot-pattern layer rendered over gradient background
+│       ├── VuHorizontalDrawable.cs — IDrawable: 5 horizontal band bars
+│       ├── VuVerticalDrawable.cs   — IDrawable: N vertical column bars
+│       ├── VuOscilloscopeDrawable.cs — IDrawable: waveform oscilloscope
+│       ├── VuLedDrawable.cs        — IDrawable: LED bar graph (dot-matrix)
+│       └── VuBannerDrawable.cs     — IDrawable: LED banner (full-width bar)
 ├── Platforms/Android/
+│   ├── MainActivity.cs                   — App entry point, permission requests, folder setup
+│   ├── MainApplication.cs                — Application subclass (MAUI bootstrap)
 │   ├── AudioPlaybackService.cs           — Main service (partial class)
 │   ├── AudioPlaybackService.Playback.cs  — Play/Stop/Pause/HardReset, equalizer
 │   ├── AudioPlaybackService.Media.cs     — VLC events, notifications, metadata
@@ -1704,7 +1509,6 @@ RadioAndroid/
 │   ├── AudioPlaybackService.Callbacks.cs — MediaSession + AudioFocus
 │   ├── AudioPlaybackService.Cellular.cs  — Cellular fallback, WiFi recovery monitor
 │   ├── AudioPlaybackService.Watchdog.cs  — Watchdog timer, VLC activity tracking
-│   ├── BillingService.cs                 — Google Play Billing integration (Plugin.InAppBilling, purchase + restore)
 │   └── AndroidManifest.xml               — Android app manifest (permissions, features)
 └── RadioAndroid.csproj                   — .NET MAUI project file (dependencies, config)
 ```
@@ -1745,70 +1549,129 @@ Separating playback logic, reconnect logic, media session callbacks, queue manag
 
 ---
 
----
+### Android 8–12 Compatibility: Notifications, Storage, Directory Access
 
-## 📦 Key Dependencies
+Building a single APK that targets Android 8 through 16 requires handling two areas that changed significantly between API versions: notification permission prompts and public file storage. Android 13+ standardized both; Android 8–12 require different code paths.
 
-### Core (all platforms)
+#### Notifications — no permission prompt before Android 13
 
-| Package | Version | Purpose |
-|---|---|---|
-| `Microsoft.Maui.Controls` | 10.0.50 | .NET MAUI UI framework |
-| `Microsoft.Maui.Essentials` | 10.0.50 | Platform APIs (Connectivity, Preferences, etc.) |
-| `Microsoft.Maui.Graphics` | 10.0.50 | Drawing and graphics primitives |
-| `Microsoft.Maui.Resizetizer` | 10.0.50 | SVG → platform icon/splash generation |
-| `Microsoft.Extensions.Logging.Debug` | 10.0.5 | Debug logging |
-| `CommunityToolkit.Maui` | 14.0.1 | MAUI community extensions |
-| `LibVLCSharp` | 3.9.6 | C# bindings for LibVLC audio engine |
-| `Plugin.InAppBilling` | 7.1.1 | Google Play Billing — integration for planned freemium features (Favorites, EQ Save & Load) |
+On Android 13+ (API 33+), `POST_NOTIFICATIONS` is a runtime permission that must be requested explicitly. The user sees a system dialog and can deny it. The app requests it in `MainActivity.OnCreate()` only when running on API 33 or higher.
 
-### Android-only
+On Android 8–12 (API 26–32), posting notifications does not require any runtime permission. The manifest declaration of `android.permission.POST_NOTIFICATIONS` is sufficient. Asking the user for permission on these versions would be incorrect — the API did not exist, the system would ignore the request, and the dialog would confuse users or never appear at all.
 
-| Package | Version | Purpose |
-|---|---|---|
-| `VideoLAN.LibVLC.Android` | 3.7.0-beta | Native LibVLC library (`.so` binaries for ARM/x86). **Beta is intentional** — this is the only version that compiles correctly against the memory layout of modern Android devices (ARMv8/64-bit). The stable 3.x release produces linker errors on current hardware. Google Play accepts and distributes this build without issues. |
-| `LibVLCSharp` | 3.9.6 | C# bindings for LibVLC — the only VLC wrapper used in this project |
-| `LibVLCSharp.Android.AWindowModern` | 3.9.6 | Android surface/window integration for LibVLC |
-| `Xamarin.AndroidX.Media` | 1.7.1.2 | `MediaBrowserServiceCompat` — required for Android Auto |
-| `Xamarin.AndroidX.Lifecycle.*` | 2.10.0.2 | Must be explicitly pinned — see below |
-| `Xamarin.AndroidX.SavedState.SavedState.Ktx` | 1.4.0.2 | SavedState Kotlin extensions (AndroidX dependency) |
-| `Xamarin.Google.Android.Play.Billing` | 7.1.1 | Google Play Billing library bindings — pulled transitively by `Plugin.InAppBilling`; pinned explicitly to prevent version conflicts |
-| `Xamarin.AndroidX.Activity` | 1.10.1.1 | AndroidX Activity — pinned to resolve conflict introduced by billing |
-| `Xamarin.AndroidX.Fragment` | 1.8.7.1 | AndroidX Fragment — pinned to resolve conflict introduced by billing |
+The rule: gate the runtime permission request on the API level.
 
-> ⚠️ **AndroidX version pinning — required for build**
->
-> Two separate features introduce AndroidX transitive dependency conflicts: `Xamarin.AndroidX.Media` (Android Auto support) and `Plugin.InAppBilling` (Google Play Billing). Without explicit version pins, NuGet pulls in conflicting versions of the Lifecycle, Activity, and Fragment sub-packages, causing build failures that look like `Duplicate class kotlin.collections.jdk8.*` or `Cannot resolve symbol 'LifecycleOwner'`.
->
-> The general rule: every time a new Android-targeting NuGet package is added, check for new `Duplicate class` build errors immediately — the fix is always an explicit pin.
->
-> Required pins for this project:
-
-```xml
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common.Jvm" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.SavedState" Version="1.4.0.2" />
-<PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
-<!-- Additional pins required by Plugin.InAppBilling -->
-<PackageReference Include="Xamarin.Google.Android.Play.Billing" Version="7.1.1" />
-<PackageReference Include="Xamarin.AndroidX.Activity" Version="1.10.1.1" />
-<PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.10.1.1" />
-<PackageReference Include="Xamarin.AndroidX.Fragment" Version="1.8.7.1" />
-<PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.8.7.1" />
+```csharp
+// Only prompt for notification permission on Android 13+
+if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+{
+    if (ContextCompat.CheckSelfPermission(this, Manifest.Permission.PostNotifications)
+        != Permission.Granted)
+    {
+        ActivityCompat.RequestPermissions(this,
+            new[] { Manifest.Permission.PostNotifications }, 0);
+    }
+}
+// Android 8–12: notifications work without any runtime prompt
 ```
 
+The foreground service and media session notifications — used for background playback, Android Auto controls, and Bluetooth media buttons — work on all API levels from 26 onward without any user interaction, as long as the app has `FOREGROUND_SERVICE` in the manifest.
 
----
+#### Storage and directory access — three different behaviors
+
+Android storage access has gone through three distinct models across the supported API range:
+
+| API level | Android version | Storage model |
+|---|---|---|
+| 26–28 | Android 8.0–9 | Legacy storage — `WRITE_EXTERNAL_STORAGE` / `READ_EXTERNAL_STORAGE` required for public directories |
+| 29 | Android 10 | Scoped storage transition — `WRITE_EXTERNAL_STORAGE` no longer grants public write; MediaStore API required |
+| 30+ | Android 11–16 | Scoped storage enforced — MediaStore for public files; app-private directories need no permission |
+
+**Android 8–9 (API 26–28): runtime storage permissions required for public Downloads**
+
+Writing files to `Downloads/RadioAndroid/` on Android 8–9 requires `WRITE_EXTERNAL_STORAGE` to be both declared in the manifest and granted at runtime. Without this, `File.Create()` on a public path silently fails or throws.
+
+Manifest:
+```xml
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    android:maxSdkVersion="28" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+    android:maxSdkVersion="28" />
+```
+
+`android:maxSdkVersion="28"` ensures the declaration has no effect on Android 10+ where the permission was revoked. Runtime request in `MainActivity.OnCreate()`:
+
+```csharp
+if (Build.VERSION.SdkInt <= BuildVersionCodes.P) // API 28 = Android 9
+{
+    var permissions = new[]
+    {
+        Manifest.Permission.WriteExternalStorage,
+        Manifest.Permission.ReadExternalStorage
+    };
+    if (permissions.Any(p =>
+        ContextCompat.CheckSelfPermission(this, p) != Permission.Granted))
+    {
+        ActivityCompat.RequestPermissions(this, permissions, 0);
+    }
+}
+```
+
+**Android 10+ (API 29+): MediaStore replaces direct file writes**
+
+On Android 10 and above, writing to public directories (`Downloads`, `Music`, etc.) requires using the `MediaStore` API. Direct `File.Create()` on those paths fails even with the old permission declared.
+
+```csharp
+// Android 10+ — write via MediaStore
+var contentValues = new ContentValues();
+contentValues.Put(MediaStore.IMediaColumns.DisplayName, fileName);
+contentValues.Put(MediaStore.IMediaColumns.MimeType, "text/plain");
+contentValues.Put(MediaStore.IMediaColumns.RelativePath,
+    Android.OS.Environment.DirectoryDownloads + "/RadioAndroid/PLS");
+
+var uri = ContentResolver!.Insert(
+    MediaStore.Downloads.ExternalContentUri, contentValues)!;
+
+using var stream = ContentResolver.OpenOutputStream(uri);
+// write content to stream
+```
+
+**Creating the `Downloads/RadioAndroid/` folder structure**
+
+On Android 8–9, folders must be created explicitly with `Directory.CreateDirectory()` after storage permission is granted. On Android 10+, MediaStore creates the target path automatically when the first file is inserted.
+
+```csharp
+private static void EnsureAppFolders()
+{
+    if (Build.VERSION.SdkInt > BuildVersionCodes.P) return; // API 29+ uses MediaStore
+
+    var root = Path.Combine(
+        Android.OS.Environment.GetExternalStoragePublicDirectory(
+            Android.OS.Environment.DirectoryDownloads)!.AbsolutePath,
+        "RadioAndroid");
+
+    Directory.CreateDirectory(Path.Combine(root, "PLS")); // playlist files
+    Directory.CreateDirectory(Path.Combine(root, "EQ"));  // equalizer presets
+}
+```
+
+Call `EnsureAppFolders()` after storage permission is confirmed granted on Android 8–9, not unconditionally at startup — the permission may not be granted yet when `OnCreate` runs.
+
+**Why not use app-private storage on all versions?**
+
+App-private storage (`Android.App.Application.Context.FilesDir`) requires no permissions and works identically on all API levels. The trade-off: files written there are invisible to the user — they cannot be opened by a file manager, shared via email, or backed up manually. For playlist (`.pls`) and equalizer preset files that users are expected to copy between devices or share, public `Downloads` storage is the correct choice.
+
+**Summary — API-level behavior table**
+
+| Feature | Android 8–9 (API 26–28) | Android 10–12 (API 29–31) | Android 13–16 (API 33–35) |
+|---|---|---|---|
+| Notification permission prompt | ❌ Not needed — works without prompt | ❌ Not needed — works without prompt | ✅ Runtime prompt required (`POST_NOTIFICATIONS`) |
+| Write to public Downloads | Runtime permission required (`WRITE_EXTERNAL_STORAGE`) | MediaStore API required | MediaStore API required |
+| Create app subdirectory in Downloads | `Directory.CreateDirectory()` after permission granted | Automatic via MediaStore insert | Automatic via MediaStore insert |
+| Read from public Downloads | Runtime permission required (`READ_EXTERNAL_STORAGE`) | File picker / MediaStore query | File picker / MediaStore query |
+| App-private storage | No permission needed | No permission needed | No permission needed |
+
+> **Testing tip:** Android 8 (API 26) and Android 9 (API 28) emulators are reliable for reproducing storage permission behavior. The storage permission dialog appears on these versions; it does not appear on API 29+. Android 13 (API 33) is the first version where the notification permission dialog appears. Always test a fresh install on each API boundary (28, 29, 33) to verify the correct dialog sequence.
 
 ---
 
@@ -1832,13 +1695,319 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 
 ---
 
----
-
 ## 📱 Requirements
 
-- **Android 8–16 (API 26–36)** — supported range
+- **Android 8–16 (API 26–35)** — supported range
 - .NET 10
 - Internet connection (Wi-Fi, 4G, 5G)
+
+## 📦 Key Dependencies
+
+### Core (all platforms)
+
+| Package | Version | Purpose |
+|---|---|---|
+| `Microsoft.Maui.Controls` | 10.0.70 | .NET MAUI UI framework |
+| `Microsoft.Maui.Essentials` | 10.0.70 | Platform APIs (Connectivity, Preferences, etc.) |
+| `Microsoft.Maui.Graphics` | 10.0.70 | Drawing and graphics primitives |
+| `Microsoft.Maui.Resizetizer` | 10.0.70 | SVG → platform icon/splash generation |
+| `Microsoft.Extensions.Logging.Debug` | 10.0.8 | Debug logging |
+| `CommunityToolkit.Maui` | 14.2.0 | MAUI community extensions |
+| `LibVLCSharp` | 3.9.7.1 | C# bindings for LibVLC audio engine |
+
+### Android-only
+
+| Package | Version | Purpose |
+|---|---|---|
+| `VideoLAN.LibVLC.Android` | 3.7.0-beta | Native LibVLC library (`.so` binaries for ARM/x86). **Beta is intentional** — this is the only version that compiles correctly against the memory layout of modern Android devices (ARMv8/64-bit). The stable 3.x release produces linker errors on current hardware. Google Play accepts and distributes this build without issues. |
+| `LibVLCSharp` | 3.9.7.1 | C# bindings for LibVLC — the only VLC wrapper used in this project |
+| `LibVLCSharp.Android.AWindowModern` | 3.9.7.1 | Android surface/window integration for LibVLC |
+| `Xamarin.AndroidX.Media` | 1.8.0 | `MediaBrowserServiceCompat` — required for Android Auto |
+| `Xamarin.AndroidX.Lifecycle.*` | 2.10.0.2 | Must be explicitly pinned — see below |
+| `Xamarin.AndroidX.SavedState.SavedState.Ktx` | 1.4.0.2 | SavedState Kotlin extensions (AndroidX dependency) |
+
+> ⚠️ **AndroidX.Lifecycle version pinning — required for build**
+>
+> `Xamarin.AndroidX.Media` has deep transitive dependencies on AndroidX Lifecycle. Without explicit version pins, NuGet pulls in conflicting versions and the build fails with errors like `Duplicate class kotlin.collections.jdk8.*` or `Cannot resolve symbol 'LifecycleOwner'`.
+>
+> Add these to your `.csproj`:
+
+```xml
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common.Jvm" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Ktx" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel.Ktx" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.SavedState" Version="1.4.0.2" />
+<PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
+```
+
+
+---
+
+---
+
+## 🎨 Background Skins — Architecture Guide
+
+### What it is
+
+The app ships with six preset background colour skins plus a fully user-designed custom skin. Every skin is a linear gradient (two colours, diagonal direction) layered under a semi-transparent dot pattern. The user switches between them instantly in a side drawer; the custom skin is built live using RGB sliders.
+
+### How the gradient is applied
+
+In .NET MAUI the page background can be set at runtime by assigning a `LinearGradientBrush` to `ContentPage.Background`. The brush carries two `GradientStop` entries — start colour (top-left) and end colour (bottom-right). Replacing the brush object and calling the appropriate invalidation method updates the screen immediately; no page reload is needed.
+
+The dot pattern is drawn by a separate `GraphicsView` that sits on top of the gradient layer with `InputTransparent="True"`. Its `IDrawable` implementation draws a regular grid of filled circles using a colour built from four ARGB components, so the alpha channel controls how visible the dots are against any gradient.
+
+```csharp
+// Skeleton — structure only, no implementation details
+
+// 1. Data model stored as JSON
+record SkinPreset(string StartHex, string EndHex, string DotsArgbHex /*, optional VU block */);
+
+// 2. Singleton service — survives page navigation
+class SkinService
+{
+    public static SkinService Instance { get; } = new();
+    public SkinPreset Current { get; private set; } = /* default */;
+
+    // Called by every page on OnAppearing and by the slider handlers
+    public void Apply(SkinPreset preset, ContentPage target) { /* ... */ }
+
+    // Persist / restore
+    public Task SavePresetAsync(string name, SkinPreset preset) { /* ... */ }
+    public Task<SkinPreset?> LoadPresetAsync() { /* ... */ }
+}
+
+// 3. Dot-pattern drawable — registered as a static singleton in XAML
+class BgDotsDrawable : IDrawable
+{
+    public static readonly BgDotsDrawable Instance = new();
+    public Color DotsColor { get; set; }   // set by SkinService
+
+    public void Draw(ICanvas canvas, RectF dirtyRect)
+    {
+        // iterate grid positions, canvas.FillCircle(...)
+    }
+}
+
+// 4. Applying a skin at runtime (called from SkinService.Apply)
+void ApplySkin(ContentPage page, SkinPreset preset)
+{
+    page.Background = new LinearGradientBrush
+    {
+        StartPoint = new Point(0, 0),
+        EndPoint   = new Point(1, 1),
+        GradientStops =
+        {
+            new GradientStop { Color = Color.FromArgb(preset.StartHex), Offset = 0f },
+            new GradientStop { Color = Color.FromArgb(preset.EndHex),   Offset = 1f },
+        }
+    };
+    BgDotsDrawable.Instance.DotsColor = /* parse preset.DotsArgbHex */;
+    // trigger redraw of GraphicsView
+}
+```
+
+### Custom skin editor flow
+
+1. Three sets of RGB sliders (start colour, end colour, dots ARGBA) are exposed in the drawer.
+2. Each `ValueChanged` event rebuilds the brush and the dot colour in-memory and applies them to the live page — no confirm step.
+3. A small `Border` strip acting as a preview is also refreshed from the same values so the user sees the gradient in isolation before committing.
+
+```csharp
+// Skeleton — slider handler, no implementation details
+void OnCustomSkinSliderChanged(object sender, ValueChangedEventArgs e)
+{
+    if (_suppressSliderUpdate) return;  // guard during preset load
+
+    var preset = BuildPresetFromSliders();  // read all 10 slider values
+    SkinService.Instance.Apply(preset, this);
+    RefreshPreviewStrip(preset);            // live preview Border
+}
+```
+
+### Persistence
+
+Skin presets are serialised as plain JSON files (a small data class: two hex strings for gradient stops, one ARGB hex for dots, and an optional VU-meter block). Files are written to a dedicated app subfolder inside public `Downloads` and loaded back via the system file picker. The `SkinService` singleton owns the currently active skin state and exposes one method that accepts the data class and applies it to whatever page is currently displayed.
+
+### Key MAUI types involved
+
+| Role | MAUI / .NET type |
+|---|---|
+| Gradient background | `LinearGradientBrush`, `GradientStop` |
+| Dot pattern | `GraphicsView`, `IDrawable`, `ICanvas` |
+| Colour sliders | `Slider` (0–255 range) |
+| Preview strip | `Border` with `LinearGradientBrush.Background` |
+| Persistence | `System.Text.Json`, `FilePicker`, custom file-save helper |
+
+### Why a singleton service
+
+When the user navigates between pages the page instances are recreated. A singleton `SkinService` keeps the last applied skin in memory so that any new page can immediately ask for the current skin state on `OnAppearing` and render consistently without reading from disk every time.
+
+---
+
+## 📊 VU Meter — Architecture Guide
+
+### What it is
+
+The VU meter is a real-time audio visualiser rendered entirely in .NET MAUI using `GraphicsView` and `IDrawable`. It displays audio energy extracted from the live stream. Five independent display styles are available; the user cycles through them with a left/right swipe. Eight colour themes are available; a tap cycles through them.
+
+### Audio data source
+
+LibVLC exposes a PCM callback that delivers raw decoded audio samples before they reach the speaker. These samples arrive on a background thread at the engine's decode rate. The VU layer reads them, computes per-band energy values (arithmetic over frequency sub-ranges), and stores the result in a shared float array guarded by a lock.
+
+A timer running at roughly 30–60 Hz copies those values to a render-side buffer and calls `Invalidate()` on the active `GraphicsView`. The GraphicsView then calls `Draw(ICanvas, RectF)` on its `IDrawable` on the UI thread.
+
+```csharp
+// Skeleton — wiring only, no signal-processing details
+
+// --- PCM callback (LibVLCSharp) ---
+// Registered when playback starts. Arrives on a VLC background thread.
+void OnAudioFormat(/* params */) { /* configure PCM output format */ }
+
+void OnAudioPlay(IntPtr samples, uint count, long pts)
+{
+    // copy raw samples to a ring buffer
+    // compute energy per band — implementation intentionally omitted
+    lock (_vuLock) { /* write to _bands[] */ }
+}
+
+// --- Render timer ---
+// Created once; stopped when VU is disabled or playback stops.
+async Task RunVuTimerAsync(CancellationToken ct)
+{
+    using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(/* ~30 fps */));
+    while (await timer.WaitForNextTickAsync(ct))
+    {
+        float[] snapshot;
+        lock (_vuLock) { snapshot = (float[])_bands.Clone(); }
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            _activeDrawable.Bands = snapshot;
+            _activeGraphicsView.Invalidate();
+        });
+    }
+}
+```
+
+### Display modes
+
+Each mode is a separate `IDrawable` class. The active mode owns one `GraphicsView` slot; the rest are hidden (`IsVisible = false`). Switching mode means hiding the current view and showing the next one — no layout rebuild needed.
+
+```csharp
+// Skeleton — IDrawable contract for any VU mode
+class VuHorizontalDrawable : IDrawable
+{
+    public float[] Bands { get; set; } = new float[5];
+    public int ThemeIndex { get; set; }
+
+    public void Draw(ICanvas canvas, RectF rect)
+    {
+        var palette = VuPalettes.Get(ThemeIndex);  // returns low/mid/high Colors
+        for (int i = 0; i < Bands.Length; i++)
+        {
+            var color = palette.Lerp(Bands[i]);    // map 0..1 energy → Color
+            // canvas.FillRectangle(...)            // draw one band bar
+        }
+    }
+}
+
+// Switching modes (swipe handler)
+void SetVuMode(int modeIndex)
+{
+    VuHorizontalLayout.IsVisible   = modeIndex == 0;
+    VuVerticalView.IsVisible       = modeIndex == 1;
+    VuOscilloscopeView.IsVisible   = modeIndex == 2;
+    VuLedView.IsVisible            = modeIndex == 3;
+    VuBannerView.IsVisible         = modeIndex == 4;
+    _settings.VuMode = modeIndex;
+}
+```
+
+| Mode | Drawing approach |
+|---|---|
+| Horizontal bars | 5 `FillRectangle` calls, width proportional to band energy |
+| Vertical bars | N columns, height proportional to energy, drawn bottom-up |
+| Oscilloscope | `PathF` polyline through sample points over time |
+| LED bar graph | Grid of small filled circles, lit count proportional to energy |
+| LED banner | Single full-width rectangle, height or alpha proportional to total energy |
+
+Peak-hold markers are computed inside each drawable — a secondary float array stores the peak value and a separate decay counter per band. The decay rate and attack rate are tuning constants, not derived from any formula shared here.
+
+### Colour themes
+
+Each `IDrawable` receives an integer theme index. Inside `Draw()` the index selects a palette — a small array of `Color` values for low, mid, and high energy levels. A gradient interpolation helper maps a 0–1 energy level to a blended colour. Changing the theme calls `Invalidate()` once; no structural change.
+
+```csharp
+// Skeleton — palette lookup only
+static class VuPalettes
+{
+    // 8 palettes × 3 stops each — actual colour values not published
+    static readonly Color[][] _palettes = { /* ... */ };
+
+    public static VuPalette Get(int index) => new(_palettes[index % _palettes.Length]);
+}
+
+struct VuPalette(Color[] stops)
+{
+    // Returns interpolated Color for a normalised energy level 0..1
+    public Color Lerp(float t) { /* linear blend between stops */ }
+}
+```
+
+### Gesture wiring
+
+- **Swipe left / right** on the VU meter `Grid` → cycles display mode index, shows the corresponding `GraphicsView`, hides all others, saves the new index to `SettingsService`.
+- **Tap** on the same `Grid` → increments the colour theme index (mod 8), passes the new index to all drawables, calls `Invalidate()` on the active view, saves to `SettingsService`.
+
+Both gestures are attached directly to the containing `Grid` in XAML (`SwipeGestureRecognizer`, `TapGestureRecognizer`); the child `GraphicsView` elements all have `InputTransparent="True"` so touches pass through to the grid.
+
+### Key MAUI types involved
+
+| Role | MAUI / .NET type |
+|---|---|
+| Render surface | `GraphicsView`, `IDrawable`, `ICanvas` |
+| Geometry | `RectF`, `PathF` |
+| Timer | `PeriodicTimer` |
+| Gestures | `SwipeGestureRecognizer`, `TapGestureRecognizer` |
+| Persistence | `SettingsService` (JSON-backed singleton) |
+
+### Threading notes
+
+**Data flow:**
+
+```
+PCM callback (VLC thread)
+    → compute band energies          ← stays here, off UI thread
+    → lock(_vuLock) { _snapshot = energies; }
+    → return immediately
+
+PeriodicTimer tick (background Task)
+    → lock(_vuLock) { copy _snapshot; }
+    → MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            drawable.Bands = copy;
+            graphicsView.Invalidate();
+        })
+```
+
+- All energy computation happens in the PCM callback, **before** the lock — keeping the critical section as short as possible.
+- Only the final band array crosses thread boundaries, protected by a single `lock`.
+- The UI thread only receives a pre-computed snapshot and calls `Invalidate()` — no audio math on the UI thread.
+- **Never call any MAUI UI API from the PCM callback thread** — that path leads to native SIGSEGV crashes on Android.
+
+### VU meter on/off
+
+A `Switch` in the drawer stops the timer, hides all VU `GraphicsView` elements, and shows a placeholder `Border` (frosted background) to keep the layout stable. Re-enabling restarts the timer and restores the last active display mode and colour theme from `SettingsService`.
 
 ---
 
@@ -1862,4 +2031,4 @@ Users are responsible for ensuring they have proper access rights to all streams
 
 ---
 
-Special thanks to lead tester Ian Davidson
+Thank you all. Special thanks to lead tester Ian Davidson
