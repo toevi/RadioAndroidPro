@@ -2024,7 +2024,7 @@ Support the author: [buycoffee.to/toevi](https://buycoffee.to/toevi)
 
 ## 📄 License
 
-The app is free for personal use.
+> 📄 **License:** This documentation is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — free to read, share and reuse with attribution. This repository is documentation only and contains no application source code.
 
 LibVLC is used under the [LGPL license](https://www.videolan.org/legal.html).
 
