@@ -87,11 +87,7 @@ That is the real technical challenge — and the reason stream stability require
 
 ---
 
-> **🧪 Beta Features:** Some features are currently in beta testing and will be available in the near future:
-> - **Cover Art** — automatic album art / station logo fetching and display
-> - **Reconstructor PLS** — advanced playlist merging tool (multi-load, dedup, drag-reorder, export)
->
-> Both features are implemented and functional but are undergoing final testing before general availability.
+
 
 ---
 
