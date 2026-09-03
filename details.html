@@ -227,14 +227,14 @@ footer a{color:var(--accent);text-decoration:none;}
 <section class="sec" id="vlc">
   <div class="sec-kicker">Under the Hood</div>
   <div class="sec-title">Why <em>LibVLC</em> matters for internet radio</div>
-  <p class="sec-desc">Most Android radio apps rely on Android's built-in MediaPlayer or Google's ExoPlayer. RadioAndroid 6.0 uses <strong style="color:#fff">LibVLC</strong> — the same engine behind VLC Media Player, trusted by 300+ million users worldwide. For internet streams, the difference is significant.</p>
+  <p class="sec-desc">Most Android radio apps rely on Android's built-in MediaPlayer or Google's ExoPlayer. RadioAndroid 6.0 uses <strong style="color:#fff">LibVLC</strong> — the same engine behind VLC Media Player, trusted by 300+ million users worldwide. For internet streams, the difference is significant. For <strong style="color:#fff">HLS streams (.m3u8)</strong> the app switches to ExoPlayer; the engine is chosen automatically per stream.</p>
 
   <div class="vlc-grid">
     <div class="vlc-card">
       <div class="vc-icon">🌐</div>
       <h4>Protocol Coverage</h4>
-      <p>Handles HTTP, HTTPS, HLS, AAC, MP3, Ogg Vorbis, DASH, ICY metadata and more — natively, without third-party plugins.</p>
-      <div class="vc-tag">vs ExoPlayer: limited HLS, no ICY</div>
+      <p>Handles HTTP, HTTPS, AAC, MP3, Ogg Vorbis, DASH, ICY metadata and more — natively, without third-party plugins. HLS (.m3u8) streams are played by ExoPlayer.</p>
+      <div class="vc-tag">LibVLC for ICY · ExoPlayer for HLS</div>
     </div>
     <div class="vlc-card">
       <div class="vc-icon">🔁</div>
@@ -336,10 +336,11 @@ footer a{color:var(--accent);text-decoration:none;}
     <div class="pc-table">
       <div class="pc-head pro"><span>✅</span> Strengths</div>
       <div class="pc-row"><span class="mark">🚗</span><div class="txt"><strong>Built for everyday travel</strong><small>Used daily in cars, bikes, buses and trains. Designed from day one as a radio for commuters and travellers.</small></div></div>
-      <div class="pc-row"><span class="mark">🔧</span><div class="txt"><strong>LibVLC engine</strong><small>Best-in-class stream stability, protocol support and audio pipeline</small></div></div>
+      <div class="pc-row"><span class="mark">🔧</span><div class="txt"><strong>LibVLC + ExoPlayer engine</strong><small>Best-in-class stream stability, protocol support and audio pipeline — with ExoPlayer handling HLS (.m3u8) streams</small></div></div>
       <div class="pc-row"><span class="mark">🎚️</span><div class="txt"><strong>Native 10-band equalizer</strong><small>Runs inside VLC pipeline, works on all stream formats</small></div></div>
       <div class="pc-row"><span class="mark">📂</span><div class="txt"><strong>Unlimited custom stations</strong><small>Add any stream URL — no catalogue lock-in</small></div></div>
       <div class="pc-row"><span class="mark">🚗</span><div class="txt"><strong>Full Android Auto</strong><small>Google-reviewed, not just audio — full UI control while driving</small></div></div>
+      <div class="pc-row"><span class="mark">🛠️</span><div class="txt"><strong>Aftermarket head units &amp; uncertified tablets</strong><small>Works on Android car head units and tablets without Google certification — installed from the Play Store, no sideloading. Runs in split screen next to navigation.</small></div></div>
       <div class="pc-row"><span class="mark">📺</span><div class="txt"><strong>Chromecast TV &amp; ChromeOS</strong><small>One app for phone, tablet, TV box and laptop</small></div></div>
       <div class="pc-row"><span class="mark">📡</span><div class="txt"><strong>Wi-Fi → LTE fallback</strong><small>Seamless switch, no playback interruption</small></div></div>
       <div class="pc-row"><span class="mark">🎨</span><div class="txt"><strong>VU Meter &amp; skins</strong><small>5 visualiser modes, 8 colour palettes, custom background skins</small></div></div>
@@ -376,7 +377,7 @@ footer a{color:var(--accent);text-decoration:none;}
 <div class="verdict-box">
   <div style="font-size:32px;margin-bottom:14px;">📱</div>
   <h3>Ready to try RadioAndroid 6.0?</h3>
-  <p>Free, no ads, no tracking. Built for everyday travel — car, bike, bus, train. Powered by LibVLC on Android 8–16.</p>
+  <p>Free, no ads, no tracking. Built for everyday travel — car, bike, bus, train. Powered by LibVLC and ExoPlayer on Android 8–16.</p>
   <div class="verdict-btns">
     <a href="https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid" class="vbtn primary" target="_blank">📱 Download on Google Play</a>
     <a href="index.html" class="vbtn ghost">← Back to App Page</a>
@@ -386,7 +387,7 @@ footer a{color:var(--accent);text-decoration:none;}
 </div><!-- /wrap -->
 
 <footer>
-  <p>RadioAndroid 6.0 · Tomek Maslowski / tmfgroup · <a href="https://github.com/toevi/RadioAndroidPro" target="_blank">GitHub</a> · <a href="https://buycoffee.to/toevi" target="_blank">☕ Support the dev</a></p>
+  <p>RadioAndroid 6.0 · Tomek Maslowski / tmfgroup · <a href="https://github.com/toevi/RadioAndroidPro" target="_blank">GitHub</a> · <a href="https://buycoffee.to/toevi" target="_blank">☕ buycoffee.to</a> · <a href="https://buymeacoffee.com/toevi" target="_blank">☕ Buy Me a Coffee</a></p>
   <p style="margin-top:4px;">Data based on public documentation · May 2026 · Scores are the author's assessment</p>
 </footer>
 
@@ -413,13 +414,17 @@ buildEQ(EQ_HEIGHTS);
 
 // RADIOANDROID 6.0 FEATURE TABLE
 const RA6_ROWS=[
-  {cat:'🔧 Engine & Stability',feature:'Audio engine',status:'pro',value:'LibVLC (native)',note:'Same engine as VLC — 300M+ users. Not MediaPlayer, not ExoPlayer.'},
+  {cat:'🔧 Engine & Stability',feature:'Audio engine',status:'pro',value:'LibVLC + ExoPlayer',note:'LibVLC — the same engine as VLC, 300M+ users — plays ICY, MP3, AAC and Ogg streams. ExoPlayer plays HLS.'},
+  {cat:'🔧 Engine & Stability',feature:'HLS (.m3u8) streams',status:'pro',value:'✓ ExoPlayer (Media3)',note:'HLS playlists are played by ExoPlayer. The app selects the engine automatically — nothing to set.'},
   {cat:'🔧 Engine & Stability',feature:'Stream stability',status:'pro',value:'2-layer + watchdog',note:'VLC internal reconnect + app-level watchdog running in parallel.'},
   {cat:'🔧 Engine & Stability',feature:'Auto-reconnect',status:'pro',value:'✓ VLC + app level',note:'Reconnects automatically at both engine and application layer.'},
   {cat:'🔧 Engine & Stability',feature:'Cellular fallback',status:'pro',value:'✓ Wi-Fi → LTE',note:'Seamlessly switches to mobile data when Wi-Fi drops.'},
-  {cat:'🔧 Engine & Stability',feature:'Protocol support',status:'pro',value:'HTTP HLS AAC MP3 Ogg DASH ICY',note:'Full format coverage natively — no plugins required.'},
+  {cat:'🔧 Engine & Stability',feature:'Protocol support',status:'pro',value:'HTTP HLS AAC MP3 Ogg DASH ICY',note:'Full format coverage — LibVLC natively, HLS via ExoPlayer. No plugins required.'},
   {cat:'📱 Platforms',feature:'Designed for travel',status:'pro',value:'✓ Car · Bike · Bus · Train',note:'Used daily in every means of transport. Built from day one as a radio for commuters and travellers on the move.'},
   {cat:'📱 Platforms',feature:'Android phones & tablets',status:'pro',value:'✓ Android 8–16 (API 26–35)',note:'Tested across a wide range of devices and OS versions.'},
+  {cat:'📱 Platforms',feature:'Aftermarket car head units',status:'pro',value:'✓ 2-DIN Android units',note:'Runs on aftermarket Android head units — including models that are not Google-certified. Confirmed on the road by testers on such units.'},
+  {cat:'📱 Platforms',feature:'Uncertified devices',status:'pro',value:'✓ No Play certification required',note:'The app is offered by the Play Store on devices without Google certification — common on aftermarket head units and cheap tablets. No sideloading needed.'},
+  {cat:'📱 Platforms',feature:'Split screen with navigation',status:'pro',value:'✓ Works alongside maps',note:'Confirmed on two different head units (1280×720 and 2000×1200): the player keeps working in a narrow split-screen strip next to a running navigation app.'},
   {cat:'📱 Platforms',feature:'Android Auto',status:'pro',value:'✓ Full (Google-reviewed)',note:'Full UI integration — not just audio passthrough. Officially reviewed by Google.'},
   {cat:'📱 Platforms',feature:'Chromecast TV / TV Box',status:'pro',value:'✓ LAN/Wi-Fi',note:'Streams over home network via Chromecast — no native Android TV app required.'},
   {cat:'📱 Platforms',feature:'ChromeOS / Laptops',status:'pro',value:'✓',note:'Runs on Chromebooks and Chrome OS laptops.'},
@@ -446,7 +451,7 @@ const RA6_ROWS=[
   {cat:'💰 Business',feature:'Podcast support',status:'con',value:'✗ None',note:'Radio streams only. No podcast directory or RSS feed reader.'},
   {cat:'💰 Business',feature:'Community size',status:'con',value:'Small',note:'Single-developer project — fewer reviews and forum resources than TuneIn.'},
   {cat:'⚙️ Technology',feature:'Framework',status:'pro',value:'C# / .NET MAUI',note:'Modern cross-platform framework — enables future iOS/Windows ports.'},
-  {cat:'⚙️ Technology',feature:'Audio library',status:'pro',value:'LibVLC · LGPL',note:'Open-source, battle-tested, no vendor lock-in.'},
+  {cat:'⚙️ Technology',feature:'Audio library',status:'pro',value:'LibVLC · LGPL + ExoPlayer · Apache 2.0',note:'Both open-source and battle-tested, no vendor lock-in. ExoPlayer is used for HLS streams.'},
   {cat:'⚙️ Technology',feature:'Minimum Android',status:'pro',value:'Android 8.0 (API 26)',note:'Covers 98%+ of active Android devices.'},
 ];
 
