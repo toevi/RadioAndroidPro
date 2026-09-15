@@ -341,6 +341,7 @@ footer a{color:var(--accent);text-decoration:none;}
       <div class="pc-row"><span class="mark">📂</span><div class="txt"><strong>Unlimited custom stations</strong><small>Add any stream URL — no catalogue lock-in</small></div></div>
       <div class="pc-row"><span class="mark">🚗</span><div class="txt"><strong>Full Android Auto</strong><small>Google-reviewed, not just audio — full UI control while driving</small></div></div>
       <div class="pc-row"><span class="mark">🛠️</span><div class="txt"><strong>Aftermarket head units &amp; uncertified tablets</strong><small>Works on Android car head units and tablets without Google certification — installed from the Play Store, no sideloading. Runs in split screen next to navigation.</small></div></div>
+      <div class="pc-row"><span class="mark">🪟</span><div class="txt"><strong>Windows desktop port</strong><small>Same C# codebase and LibVLC engine on Windows 10/11 — installer coming soon</small></div></div>
       <div class="pc-row"><span class="mark">📺</span><div class="txt"><strong>Chromecast TV &amp; ChromeOS</strong><small>One app for phone, tablet, TV box and laptop</small></div></div>
       <div class="pc-row"><span class="mark">📡</span><div class="txt"><strong>Wi-Fi → LTE fallback</strong><small>Seamless switch, no playback interruption</small></div></div>
       <div class="pc-row"><span class="mark">🎨</span><div class="txt"><strong>VU Meter &amp; skins</strong><small>5 visualiser modes, 8 colour palettes, custom background skins</small></div></div>
@@ -351,8 +352,7 @@ footer a{color:var(--accent);text-decoration:none;}
 
     <div class="pc-table">
       <div class="pc-head con"><span>⚠️</span> Limitations</div>
-      <div class="pc-row"><span class="mark">🍎</span><div class="txt"><strong>No iOS version yet</strong><small>MAUI port is planned but not released — Android only for now</small></div></div>
-      <div class="pc-row"><span class="mark">💻</span><div class="txt"><strong>No Windows desktop app yet</strong><small>Same — planned via .NET MAUI but not available</small></div></div>
+      <div class="pc-row"><span class="mark">🍎</span><div class="txt"><strong>No iOS version yet</strong><small>MAUI port is planned but not released — Android and Windows for now</small></div></div>
       <div class="pc-row"><span class="mark">📖</span><div class="txt"><strong>No built-in station catalogue</strong><small>You must add stations manually or import from fmstream.org — no built-in discovery browser</small></div></div>
       <div class="pc-row"><span class="mark">⌚</span><div class="txt"><strong>No Wear OS support</strong><small>Smartwatch apps on Wear OS not supported</small></div></div>
       <div class="pc-row"><span class="mark">☁️</span><div class="txt"><strong>No cloud sync</strong><small>Playlist lives on device — manual backup required if you switch phones</small></div></div>
@@ -430,7 +430,7 @@ const RA6_ROWS=[
   {cat:'📱 Platforms',feature:'ChromeOS / Laptops',status:'pro',value:'✓',note:'Runs on Chromebooks and Chrome OS laptops.'},
   {cat:'📱 Platforms',feature:'Bluetooth & headphones',status:'pro',value:'✓ Media Session',note:'Works with car Bluetooth, headphones, Boomboxes and BT watches.'},
   {cat:'📱 Platforms',feature:'iOS',status:'con',value:'✗ Not yet',note:'Planned via .NET MAUI but not released.'},
-  {cat:'📱 Platforms',feature:'Windows desktop',status:'con',value:'✗ Not yet',note:'Also planned via MAUI — not available yet.'},
+  {cat:'📱 Platforms',feature:'Windows desktop',status:'pro',value:'✓ Port done · installer soon',note:'Windows 10/11 x64 port built from the same C# / .NET MAUI codebase with the LibVLC engine. Android Auto, Bluetooth media session and cellular fallback do not apply on the desktop. Installer coming soon.'},
   {cat:'📱 Platforms',feature:'Wear OS',status:'con',value:'✗ Not supported',note:'Smartwatch apps on Wear OS are not supported.'},
   {cat:'🎨 UI & Audio',feature:'10-band equalizer',status:'pro',value:'✓ Native LibVLC',note:'Runs inside VLC pipeline. Works on ALL stream formats including AAC.'},
   {cat:'🎨 UI & Audio',feature:'VU Meter',status:'pro',value:'✓ 5 modes · 8 palettes',note:'Real-time visualiser with multiple display modes and colour themes.'},
@@ -450,7 +450,7 @@ const RA6_ROWS=[
   {cat:'💰 Business',feature:'No tracking',status:'pro',value:'✓ Zero telemetry',note:'No analytics, no usage tracking, no data collection.'},
   {cat:'💰 Business',feature:'Podcast support',status:'con',value:'✗ None',note:'Radio streams only. No podcast directory or RSS feed reader.'},
   {cat:'💰 Business',feature:'Community size',status:'con',value:'Small',note:'Single-developer project — fewer reviews and forum resources than TuneIn.'},
-  {cat:'⚙️ Technology',feature:'Framework',status:'pro',value:'C# / .NET MAUI',note:'Modern cross-platform framework — enables future iOS/Windows ports.'},
+  {cat:'⚙️ Technology',feature:'Framework',status:'pro',value:'C# / .NET MAUI',note:'Modern cross-platform framework — the Windows port is already built on it; iOS would follow the same path.'},
   {cat:'⚙️ Technology',feature:'Audio library',status:'pro',value:'LibVLC · LGPL + ExoPlayer · Apache 2.0',note:'Both open-source and battle-tested, no vendor lock-in. ExoPlayer is used for HLS streams.'},
   {cat:'⚙️ Technology',feature:'Minimum Android',status:'pro',value:'Android 8.0 (API 26)',note:'Covers 98%+ of active Android devices.'},
 ];
