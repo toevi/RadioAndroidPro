@@ -56,6 +56,7 @@ This document covers the app from two angles: what it does, and what it took to 
 - **HLS Packet-Loss Freeze — bounded Stop/Dispose & wedged-player recovery (FIX 18)**
 - **Bluetooth AVRCP Metadata — blank display on older head units (BT_FIX)**
 - **System Font-Scale ANR — the `AttachBaseContext` override**
+- **Field Notes — Traps That Cost Days (16 platform traps: HLS `abort()`, R8 vs JNI, a poisoned `obj`, a missing ABI, wake locks, `BECOMING_NOISY`, `launchIntent`, Android Auto position, voice search, fonts missing from an AAB, theme fan-out crash, Play's DEX obfuscation)**
 - System Architecture & Protection Layers
 - AndroidManifest.xml — Permissions Overview
 - **Android 8–12 Compatibility: Notifications, Storage, Directory Access**
@@ -2219,6 +2220,316 @@ A `Switch` in the drawer stops the timer, hides all VU `GraphicsView` elements, 
 
 ---
 
+## 🧭 Field Notes — Traps That Cost Days
+
+The deep dives above are the architecture. This part is the opposite: sixteen things that behaved as
+if the code were fine. Every one of them was found on a device or in Play Console rather than in a
+compiler message, most cost days, and none of them appears in official documentation. They are
+written for the next person building Android background audio in .NET MAUI, with or without LibVLC —
+the lesson usually outlives the specific API.
+
+A seventeenth, the system font-scale ANR, is already covered above in *Technical Deep Dives § 14*.
+
+---
+
+### 1. libvlc kills the whole process on a malformed HLS playlist
+
+Symptom from the road: the app "closes itself in the car", while Android Auto and Bluetooth keep
+showing a playing session, because the sticky foreground service is resurrected while the Activity
+is gone. There is no exception to catch — `abort()` inside native code is a SIGABRT, not something
+managed code can intercept:
+
+```
+adaptive/playlist/SegmentList.cpp:133 assertion "duration" failed
+```
+
+It is data-dependent, not version-dependent, and it is **not** a bug in these bindings or in this
+app: VLC for Android 3.7.1 installed from Google Play dies with the identical assertion against the
+same stream, after the same silent wedge (audio stopped, demux time frozen, no error). Checked
+statically too — the Play build's `libvlc.so` carries the same assert string.
+
+**What to do.** There is no libvlc build to move to, so the only answer is to not send `.m3u8` there.
+This app became a hybrid: ExoPlayer plays HLS, libvlc plays everything else, and libvlc's 10-band
+equalizer was ported into the ExoPlayer path 1:1 so the sound does not change with the engine.
+
+---
+
+### 2. R8 removes the Java that only JNI calls — and video goes black in silence
+
+Enabling `AndroidLinkTool=r8` cut the dex from 21.7 MB to 10.3 MB and broke nothing a smoke test
+would notice: playback, Android Auto and Bluetooth metadata all worked. Video did not. The surface
+rendered black with no exception and no log line.
+
+**Cause.** libvlc's audio path is pure P/Invoke, so no Java is involved and nothing showed. The video
+output is the opposite: it reaches back up into `org.videolan.libvlc.AWindow` **by name at runtime**,
+and a JNI lookup by name is invisible to R8. The generated keep rules cover only what the *managed*
+binding touches, so `AWindowNativeHandler`, `setBuffersGeometry`, `registerNative` and
+`unregisterNative` were all stripped.
+
+**What to do.** Keep the native-facing package wholesale, and verify against R8's `mapping.txt`
+rather than by eye (2 surviving `org.videolan` classes before the rule, 26 after):
+
+```proguard
+-keep class org.videolan.** { *; }
+-keepclassmembers class org.videolan.** { *; }
+```
+
+**Lesson:** after enabling a shrinker, test the paths that only native code or the system calls.
+Those are exactly the ones no unit test and no quick manual pass will reach.
+
+---
+
+### 3. A poisoned `obj`/`bin` can fake a rendering bug for three days
+
+Every station tile lost its rounded corners. Nothing in the XAML had been touched for three weeks.
+`uiautomator` showed the platform view at the right size, but the paint starting 24 px inside it on
+every edge — so the measurement agreed that something was clipping, and the code said nothing was.
+
+Eliminated by measurement, one at a time: the item template, the `CollectionView` build, shadows,
+hardware layers, density, styles, the pinned AndroidX versions, the source generator, orientation
+locking and recycling. The answer came from building a **fresh clone of the same commit in a
+different directory**: healthy on the first try. The working directory was healthy again after
+`rm -rf obj bin`, and the fault came back when the old `obj` was restored on the same emulator.
+
+**What to do.** When a rendering symptom contradicts the code, build a clean clone in a separate
+directory *before* bisecting. `dotnet clean` and "Clean Solution" are not enough — delete the
+directories physically. Do not rename `obj` to `obj_old` inside the project, either: the `**/*.cs`
+globs will pick it up and the build dies with CS0579.
+
+---
+
+### 4. A missing 32-bit ABI makes the app vanish from the Store — with no error anywhere
+
+Not a crash, not a bug report: on cheap Android 8 tablets — the kind people bolt into a dashboard —
+the app **did not appear in Play Store search at all**. No "incompatible" notice. From the developer
+side everything is green: published, installs fine on every phone you own.
+
+**Cause.** .NET MAUI's Release default is 64-bit only (`android-arm64;android-x64`), so a 32-bit ARM
+device gets no `libvlc.so`, the bundle has no `armeabi-v7a` slice, and Play filters the listing out
+entirely.
+
+**What to do.** Ship the 32-bit ARM slice as well and check the ABI splits of the AAB (bundletool or
+Play Console → device catalogue) rather than trusting "it installs here". Related, and in the same
+family of invisible store rules: Play requires native libraries aligned to **16 KB pages**, which is
+why this app ships a deliberately *beta* native dependency — it is the only build that satisfies it.
+
+---
+
+### 5. Pause that never releases the wake lock
+
+Play Console flagged "excessive partial wake locks". The lock was taken in `OnStartCommand()` and
+`PlayRadio()` and released in `StopRadio()` and `OnDestroy()` — but `PauseRadio()` released nothing.
+A pause is not a stop: the service stays alive and foreground, so the CPU stayed pinned awake with no
+audio coming out, for as long as the user left it paused. Every pause path was affected, including
+audio-focus loss and a connectivity drop.
+
+**What to do.** Tie wake-lock ownership to *audio actually playing*, not to the service's lifetime,
+and release on every path where the service outlives playback. The one explicit exception here is a
+pending reconnect, which has to survive CPU sleep. Verified with `dumpsys power` across both engines:
+acquire on play → release on pause → acquire on resume, with the service still alive and the active
+wake-lock list empty.
+
+---
+
+### 6. No `ACTION_AUDIO_BECOMING_NOISY` — the stream plays on to an empty room
+
+Unplug headphones or drop a Bluetooth headset and the route falls back to the phone speaker with the
+stream still running, out loud, from a pocket. The app never listened for the broadcast at all.
+Nothing crashes, nothing is logged; it is simply rude, and you only notice it on a real device.
+
+**What to do.** Register a receiver, pause, and report `StatePaused` — never `StateStopped`, because
+head units drop the play button on STOPPED. Deliberately **no auto-resume** when the route returns:
+an earlier build resumed on network/focus and misfired in the obvious place — the driver parked,
+walked into the house, the phone joined home Wi-Fi, and the radio started playing on its own.
+
+---
+
+### 7. A media session without `launchIntent` opens somebody else's app
+
+The session was correct in every way that gets checked: active, holding media-button focus, correct
+`PlaybackState`, correct metadata, working transport buttons. But tapping the media card in the
+notification shade opened a *different* media app. The tempting conclusion — that a MAUI app is
+simply less well wired into the system than a Gradle/Kotlin one — was wrong, and expensive.
+
+**Cause and tell.** `dumpsys media_session` showed `launchIntent=null`. With no activity attached to
+the session (and no `contentIntent` on the notification), the system card has nowhere to send the
+tap and falls back to whatever else is around.
+
+**What to do.** Set the session activity and the notification's content intent, and read
+`dumpsys media_session` before theorising: everything else in that dump can be perfect while the one
+field that matters is empty.
+
+---
+
+### 8. Android Auto reads position `0` as "draw the progress row at all"
+
+Google reshaped the Android Auto now-playing screen. This app came through unchanged; its Kotlin
+sibling, same feature set and same session design, came out with cover art grown to the full height
+of the card and no progress row.
+
+**Cause.** The difference was one argument: this app publishes `SetState(state, 0, 1.0f)` — a
+standing literal zero — while the sibling published `PLAYBACK_POSITION_UNKNOWN` (`-1`), which for a
+live stream looks more honest and is tempting to "fix" to. Android Auto does not read that field to
+learn where playback is; it reads it to decide **whether to draw the progress row**. `-1` means "no
+row", and the freed strip goes to the artwork.
+
+**What to do.** For a live stream, publish position `0` with speed `1.0f`: the speed is what makes
+the car extrapolate a running counter, while the denominator stays `0:00` because a live stream has
+no length. There is a second reason not to switch to `-1`: Android answers Bluetooth AVRCP
+`GetPlayStatus` from this same state, an unknown position goes out as `0xFFFFFFFF`, and old head
+units can drop the whole status packet.
+
+---
+
+### 9. Track time on a live stream — built, verified, removed
+
+A real elapsed-time counter was built, worked on every surface, and was deleted again. A live stream
+never tells you how far into the song you joined, so after a station switch or a stop/play the bar
+could only start from zero on a track that is already half over. Two rescue attempts were rejected
+for the same reason, and the standing zero of the previous note is the answer rather than a
+placeholder waiting to be improved.
+
+**Lesson worth more than the feature:** a progress bar is a promise about *position*. If the source
+cannot supply one, the honest UI is the one that does not pretend.
+
+---
+
+### 10. Voice search: the intent that replays itself, and filler words that cost a threshold
+
+No language model is involved: the assistant does the speech-to-text, strips the app name, and hands
+over a bare query through `onPlayFromSearch` / `MEDIA_PLAY_FROM_SEARCH`. Two traps live on the app
+side.
+
+**The command that replayed itself.** `OnCreate` handled the intent unconditionally, and a recreated
+activity is handed back its **original** intent — so a voice request from an hour ago replays itself
+when the system recreates the activity after killing the process. The fix is
+`if (savedInstanceState == null)`; `OnNewIntent` is untouched, because there the intent is new by
+definition. A deterministic way to reproduce it: change the system font scale, which recreates the
+activity with its original intent.
+
+**Filler words are not free.** The fuzzy tier matches when ~70% of query tokens find a counterpart,
+so every word the assistant forwards but the user did not mean is an active cost. In the car people
+avoid the word "station" (it makes head units hunt for a petrol station) and say "play the **track**
+Groove Salad" instead — which scored 2 of 3 tokens, 66% against a 70% bar, and matched nothing with
+the name pronounced perfectly. Strip the media nouns and command verbs symmetrically from both sides.
+**Articles are the exception and need their own one-way list:** La Mega, El Dorado, Das Ding, The
+Beat are *names*, and stripping articles from the station side collapses them onto their neighbours.
+
+---
+
+### 11. The car cannot start the app on its own without a RECENT root
+
+In the car the app had to be opened by hand before anything worked; once running, browsing, transport
+and voice were all fine. `OnGetRoot` ignored its `rootHints` and always returned the browse root.
+
+When the system — or a head unit after a restart — wants to know what an app *would* resume, it does
+not launch it. It binds to the `MediaBrowserService` with `android.service.media.extra.RECENT` in the
+root hints and reads the answer. Ignore the hint and there is nothing to resume, so there is no
+session for the car to act on.
+
+**What to do.** Answer the RECENT query with a **separate** root whose single child is the last
+played item, carrying the same media id the browse tiles use, so resuming lands on the existing play
+path instead of a second one. Return `null` when there is nothing to resume — an empty root
+advertises a dead entry. Test harness, since emulators do not send the hint: `adb reboot`, because
+the platform itself sends it after a restart. Test it on the **shrunk Release build** too: this path
+is called only by the system, which makes it a prime candidate for removal.
+
+---
+
+### 12. A stale Resizetizer stamp ships an AAB with no fonts at all
+
+An update built with 0 errors reached Play, and on the devices that installed it every icon was an
+empty box and all text had fallen back to Roboto. The package contained no `.ttf` at all; the
+previous one contained three. Nothing in the source had changed.
+
+**Cause.** `ProcessMauiFonts` (Microsoft.Maui.Resizetizer) declares **only its stamp file** as
+`Outputs`. If the intermediate font folder is gone while `mauifont.stamp` survives — a partial clean,
+a design-time build from the IDE — MSBuild finds the target up to date, skips it, and no font ever
+becomes an `AndroidAsset`. Images are immune because their target also lists an outputs file.
+
+**What to do.** Guard it in the project file: delete the stale stamp when a font is missing from the
+intermediate folder, and fail the build if one is still missing afterwards. More generally — **diff
+every release artifact against the previous one** (the `base/assets`, `base/res` and `base/lib`
+listings) and account for every difference with a commit. A clean build log proves the build ran, not
+that the package is complete.
+
+---
+
+### 13. Setting `UserAppTheme` fans out — and one subscriber can take the process down
+
+Tapping a theme button occasionally closed the app: no dialog, no error, playback gone, seemingly at
+random.
+
+```
+FATAL EXCEPTION: main
+TargetInvocationException
+  at Microsoft.Maui.WeakEventManager.HandleEvent
+  at Microsoft.Maui.Controls.Application.TriggerThemeChangedActual
+  at Microsoft.Maui.Controls.Application.set_UserAppTheme
+```
+
+Assigning `UserAppTheme` makes MAUI notify every live `AppThemeBinding` synchronously through
+`WeakEventManager`. One subscriber that throws takes the process with it — and the randomness is
+simply which bindings happen to be alive, which depends on the pages the user has visited. **Which**
+subscriber throws is still unknown here, because Release builds trim exception messages
+(`UseSystemResourceKeys`), leaving only the outer type name; roughly 150 switches on an emulator,
+Debug and Release, never reproduced it.
+
+**What to do.** Bound the assignment and log the whole chain, so a cosmetic tap cannot kill playback
+and the next occurrence names the culprit. If you need the inner exception from a Release build, one
+build with `-p:UseSystemResourceKeys=false` restores readable messages.
+
+---
+
+### 14. Play's "DEX obfuscation 0%" is written by the .NET SDK, not by your project
+
+Play Console now asks for at least 25% optimisation, shrinking and obfuscation of DEX code, with a
+February 2027 deadline. A .NET for Android app reports **0% obfuscation** no matter what the project
+says, and nothing in the project can change it: the SDK writes `-dontobfuscate` as the first line of
+the R8 configuration it generates (the string is inside `Xamarin.Android.Build.Tasks.dll`). R8 still
+shrinks; only renaming is off. The reason is sound — JNI binds managed peers to Java classes **by
+name**, so renaming a callable wrapper breaks lookups at runtime.
+
+**Do not strip that line by hand.** The generated keep rules do not cover every field bindings read
+by name, and apps that have tried it crash at startup. For a .NET app the payoff would be a console
+metric anyway: your own logic ships as IL, not as DEX.
+
+**What to do.** Wait for `AndroidR8ObfuscationMode=private-members`, which renames private and
+package-private members only and leaves JNI-visible names alone — merged into `dotnet/android` in
+September 2026, default in .NET 11, backported to .NET 10 servicing with `disabled` as the default,
+so it has to be set explicitly. Then smoke-test on a device before uploading.
+
+---
+
+### 15. A singleton subscription leaks the whole previous activity
+
+Back exits the app while the foreground service keeps playing, so the process survives; reopening
+builds a new Shell and a new page. A singleton service held every previous page through an event
+subscription that was taken out once and never removed — and with the page came its native views and
+the destroyed activity. Fifteen cycles: activities 4 → 18, views 1160 → 4962, PSS 291 → 365 MB.
+
+**Two things the audit taught beyond the fix.** Unsubscribe in `Window.Destroying`, not in
+`Unloaded` — the latter fires on ordinary tab switches and breaks playback started from the list. And
+measure with **forced collection**: without it the numbers lie in both directions. On a Release build
+on a real phone the fix was working (one live activity in a probe with forced GC) while the heap
+still showed eight destroyed activities and 2261 views, because the app on its own only runs small
+collections that never reach them.
+
+---
+
+### 16. A deleted asset survives an incremental build — and ships
+
+A hidden 13.8 MB video in the Help screen was removed, and the APK built straight afterwards
+**still contained it**: a deleted asset lives on in the old `obj` and is packaged again. Nothing in
+the build output mentions that a file which no longer exists in the project went into the package.
+It disappeared only after `obj` and `bin` were deleted by hand — the same class of failure as note 3.
+
+Worth knowing what it was worth: that one file was ~25% of the download on arm64, more than the Help
+screen, every screenshot and the app's own code combined. **Measure what is actually in the package
+before guessing where the size went**, and build every release artifact from a clean `obj`.
+
+---
+
 ## 👤 Author
 
 **Tomek Maslowski / tmfgroup**
@@ -2239,4 +2550,43 @@ Users are responsible for ensuring they have proper access rights to all streams
 
 ---
 
-Thank you all. Special thanks to lead tester Ian Davidson
+## 📌 Project Status — Closed at 6.6.7
+
+**The project is finished.** Development ran for about a year, and **6.6.7 is the final version** on
+Google Play. That is a closing, not an abandonment: the app does what it set out to do, it is in
+production, and the problems in this document are solved rather than parked.
+
+**One item of work stays open**, and deliberately so: Play's DEX optimisation and obfuscation
+requirement (note 14 above). It cannot be fixed from the project today, because the .NET for Android
+SDK is the thing that disables renaming; it waits for an SDK that ships
+`AndroidR8ObfuscationMode`, and the store deadline is February 2027.
+
+**The Windows port is done.** The same C# codebase and the same LibVLC engine run on Windows 10/11 —
+equalizer, metadata, cover art, skins and the sleep timer included. It will most likely be published
+in the Microsoft Store, for one practical reason rather than reach: an installer downloaded from a
+website gets blocked on its way in, and a store listing is the straightforward way around that.
+
+---
+
+## 🚧 One More Trap: Publishing as a Private Individual
+
+Shipping this app was not only an engineering problem. A personal Google Play account — not a
+company — has to clear a set of hurdles that have nothing to do with the code, and they are worth
+knowing about before you start:
+
+- **Twelve testers, found by yourself.** A personal account cannot go to production until a closed
+  test has run with at least twelve testers who stayed opted in for the required period. For a niche
+  app with no audience yet, finding and keeping twelve real people is harder than anything in this
+  document.
+- **Identity verification.** Address and identity checks on the account, done before anything can be
+  published, with their own waiting time.
+- **Android Auto review, several times over.** Declaring the app as car-compatible puts it in front
+  of a separate review against the car guidelines, and this app was rejected more than once before it
+  passed. Every round costs days and the feedback is terse, so you fix, resubmit and wait again.
+
+None of it changes a line of code, and all of it decides whether anyone ever sees the app. Budget
+time for it the way you would for a hard bug.
+
+---
+
+Thank you all — testers, reviewers and everyone who sent a report from the road.
