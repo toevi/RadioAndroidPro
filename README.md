@@ -2232,6 +2232,8 @@ answers come from the same place: where this app actually runs.
 - An **aftermarket Android tablet bolted into a dashboard** — the 2-DIN head units this app's users
   buy. Not Play-certified, at arm's length, used while the car is moving.
 - **Android Auto** — the car draws the interface itself from the app's media browse tree.
+- **A TV box or Chromecast** on the home network — the picture is on the television and the only
+  thing anyone holds is the phone, so the app is both the remote and the player.
 - **Bluetooth**, in two flavours. A head unit that sends media keys drives everything from its own
   buttons and the steering wheel, with the text on its display. Cheap units and speakers often pair
   for audio only, with no working transport keys at all — and then the app's own screen is the
