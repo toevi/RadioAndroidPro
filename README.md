@@ -2232,14 +2232,15 @@ answers come from the same place: where this app actually runs.
 - An **aftermarket Android tablet bolted into a dashboard** — the 2-DIN head units this app's users
   buy. Not Play-certified, at arm's length, used while the car is moving.
 - **Android Auto** — the car draws the interface itself from the app's media browse tree.
-- **Plain Bluetooth** — the only interface is the head unit's buttons, the steering-wheel keys and a
-  line of text on its display.
+- **Bluetooth**, in two flavours. A head unit that sends media keys drives everything from its own
+  buttons and the steering wheel, with the text on its display. Cheap units and speakers often pair
+  for audio only, with no working transport keys at all — and then the app's own screen is the
+  control surface, on a phone or tablet on the dashboard, in a moving car.
 
-**Why gestures instead of more buttons.** On a head unit at arm's length, a standard 42 dp button is
-about five millimetres of real target, and the hand reaching for it is not steady. Making the buttons
-bigger is not the fix — it was tried and dropped, because in the split-screen layout next to
-navigation, which is how these units are really used, every pixel taken for a button comes out of the
-cover art. So the whole surface becomes the target instead:
+**Why big targets and gestures instead of small precise buttons.** That last case decides it: when the
+head unit sends no media keys, the driver is aiming at this app's screen, at arm's length, in a moving
+car — where a standard 42 dp button is about five millimetres of real target and the hand reaching for
+it is not steady. So the whole surface becomes the target instead:
 
 - **double tap on the cover or on a station tile** — play or stop;
 - **swipe across the VU meter** — change its display mode;
