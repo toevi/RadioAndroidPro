@@ -2245,7 +2245,8 @@ car — where a standard 42 dp button is about five millimetres of real target a
 it is not steady. So the whole surface becomes the target instead:
 
 - **double tap on the cover or on a station tile** — play or stop;
-- **swipe across the VU meter** — change its display mode;
+- **swipe left or right across the cover or the station card** — previous or next station;
+- **swipe across the VU meter** — changes the meter's display mode only, never playback;
 - **a tile grid in the station list**, not just rows — a tile can be hit without aiming.
 
 Double tap, not single: a resting hand or a bump in the road must not stop the music.
