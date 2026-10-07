@@ -56,6 +56,7 @@ This document covers the app from two angles: what it does, and what it took to 
 - **HLS Packet-Loss Freeze — bounded Stop/Dispose & wedged-player recovery (FIX 18)**
 - **Bluetooth AVRCP Metadata — blank display on older head units (BT_FIX)**
 - **System Font-Scale ANR — the `AttachBaseContext` override**
+- **How the App Is Driven — one control model for phone, car head unit, Android Auto and Bluetooth (why gestures, why the window can close while the radio plays)**
 - **Field Notes — Traps That Cost Days (16 platform traps: HLS `abort()`, R8 vs JNI, a poisoned `obj`, a missing ABI, wake locks, `BECOMING_NOISY`, `launchIntent`, Android Auto position, voice search, fonts missing from an AAB, theme fan-out crash, Play's DEX obfuscation)**
 - System Architecture & Protection Layers
 - AndroidManifest.xml — Permissions Overview
@@ -2217,6 +2218,59 @@ PeriodicTimer tick (background Task)
 ### VU meter on/off
 
 A `Switch` in the drawer stops the timer, hides all VU `GraphicsView` elements, and shows a placeholder `Border` (frosted background) to keep the layout stable. Re-enabling restarts the timer and restores the last active display mode and colour theme from `SettingsService`.
+
+---
+
+## 🎮 How the App Is Driven — One Control Model for Four Surfaces
+
+People ask why a radio app has gestures, and why closing its window does not stop the music. Both
+answers come from the same place: where this app actually runs.
+
+**Four surfaces, and only one of them is a phone in your hand.**
+
+- The phone — often with the screen off, in a pocket or strapped to an arm while walking or running.
+- An **aftermarket Android tablet bolted into a dashboard** — the 2-DIN head units this app's users
+  buy. Not Play-certified, at arm's length, used while the car is moving.
+- **Android Auto** — the car draws the interface itself from the app's media browse tree.
+- **Plain Bluetooth** — the only interface is the head unit's buttons, the steering-wheel keys and a
+  line of text on its display.
+
+**Why gestures instead of more buttons.** On a head unit at arm's length, a standard 42 dp button is
+about five millimetres of real target, and the hand reaching for it is not steady. Making the buttons
+bigger is not the fix — it was tried and dropped, because in the split-screen layout next to
+navigation, which is how these units are really used, every pixel taken for a button comes out of the
+cover art. So the whole surface becomes the target instead:
+
+- **double tap on the cover or on a station tile** — play or stop;
+- **swipe across the VU meter** — change its display mode;
+- **a tile grid in the station list**, not just rows — a tile can be hit without aiming.
+
+Double tap, not single: a resting hand or a bump in the road must not stop the music.
+
+**In the car, the interface is not the app's at all.** Over Android Auto and Bluetooth, control
+arrives through the media session — the car's buttons, the steering wheel, voice search. Nobody
+touches the app's own screen there. The same is true of a headset: whatever buttons it has work, so a
+phone on an armband never has to come off.
+
+**And that is why closing the window does not stop the radio.** Playback lives in a foreground
+service, so leaving the screen, pressing Back or switching apps only puts the interface away. Tying
+playback to the window would mean silence the moment the car switches to navigation or the screen
+locks — and worse, a touch through a trouser pocket could start or stop the music.
+
+**So how do you end it?** There is exactly one command that does, and three things worth knowing:
+
+- **Stop in the app** — the red square. It ends the session and lets the service shut down.
+- **In the car** — a Stop from the head unit or from Android Auto does the same, through the media
+  session.
+- **From the lock screen, the notification or a headset button you can pause**, not stop. The card
+  carries Previous / Play-Pause / Next on purpose: a fourth action is the kind of growth that once
+  pushed session metadata past the Binder limit on older AVRCP head units, and blanked their displays.
+- **Swiping the app out of the recent-apps list does not end playback.** The foreground service has no
+  `stopWithTask` and no `onTaskRemoved`, so a task swipe leaves the radio playing — which is what a
+  car wants, and what a phone in a pocket wants too.
+
+There is deliberately no "Exit" button; on Android it would duplicate Stop and invite exactly the
+accident this design avoids.
 
 ---
 
