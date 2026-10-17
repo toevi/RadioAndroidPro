@@ -196,6 +196,8 @@ html[data-style="vintage"][data-finish="silver"] .vu-photo .vu-shot-silver { dis
 .vu-face.l { left:5.69%; }
 .vu-face.r { left:51.39%; }
 .vu-face svg { display:block; width:100%; height:100%; }
+.vu-face .peak { transition:fill 0.08s; }
+.vu-peak .vu-face .peak { fill:#ff3b2f; filter:drop-shadow(0 0 4px #ff3b2f) drop-shadow(0 0 8px rgba(255,59,47,0.7)); }
 .vu-face::after { content:''; position:absolute; left:6px; right:6px; top:calc(100% - 1px); height:7px; background:#0c1012; }   /* hides the photo's own needle below the dial */
 .vu-showcase-cap { text-align:center; font-family:var(--mono); font-size:11px; color:var(--muted); margin:0 auto 28px; max-width:340px; }
 .vu-showcase-cap strong { color:var(--accent); }
