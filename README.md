@@ -2590,7 +2590,7 @@ before guessing where the size went**, and build every release artifact from a c
 
 ## 👤 Author
 
-**Tomek Maslowski / tmfgroup**
+**Tomek Masłowski / tmfgroup**
 2025–2026
 
 Support the author: [buycoffee.to/toevi](https://buycoffee.to/toevi)
