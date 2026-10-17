@@ -70,6 +70,9 @@
       document.querySelectorAll('[data-set-style]').forEach(function (b) {
         b.setAttribute('aria-pressed', b.getAttribute('data-set-style') === s ? 'true' : 'false');
       });
+      document.querySelectorAll('[data-set-finish]').forEach(function (b) {
+        b.setAttribute('aria-pressed', s === 'vintage' && b.getAttribute('data-set-finish') === fin ? 'true' : 'false');
+      });
       if (finishBtn) {
         finishBtn.textContent = fin === 'silver' ? 'Black' : 'Silver';
         finishBtn.setAttribute('aria-label', 'Switch to ' + (fin === 'silver' ? 'black' : 'silver') + ' finish');
@@ -79,6 +82,20 @@
       b.addEventListener('click', function () {
         var s = b.getAttribute('data-set-style');
         d.setAttribute('data-style', s); save('ra-style', s); sync();
+      });
+    });
+    document.querySelectorAll('[data-set-finish]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var fin = b.getAttribute('data-set-finish');
+        d.setAttribute('data-finish', fin); save('ra-finish', fin); sync();
+      });
+    });
+    // buttons inside the gallery box: keep that box in view after the layout changes
+    document.querySelectorAll('.style-try button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var box = b.closest('.style-try');
+        var go = function () { box.scrollIntoView({ block: 'start', behavior: 'instant' }); };
+        requestAnimationFrame(go); setTimeout(go, 250);
       });
     });
     if (finishBtn) finishBtn.addEventListener('click', function () {

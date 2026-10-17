@@ -6,8 +6,8 @@
 <title>RadioAndroid 6.0 — Simple Internet Radio App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=VT323&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="vintage.css?v=3"/>
-<script src="style-switch.js?v=3"></script>
+<link rel="stylesheet" href="vintage.css?v=4"/>
+<script src="style-switch.js?v=4"></script>
 <style>
 :root {
   --bg:     #0a0a0f;
@@ -564,6 +564,18 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 		<div class="screenshot-item"><img src="screenshot50.png" alt="Aftermarket car head unit - player and VU meter next to a running navigation app" loading="lazy"><p>Head unit · player</p></div>
 
 	  </div>
+    </div>
+	<div class="style-try v-group" id="try-vintage">
+      <p class="when-m">🎛️ <strong>Vintage player style is coming soon.</strong> Preview the whole page in the Vintage look — black or silver, like in the app.</p>
+      <p class="when-v">You are viewing the <strong>Vintage preview</strong>. The current app release uses the Modern style.</p>
+      <div class="try-btns" translate="no">
+        <button type="button" class="when-m" data-set-style="vintage" data-set-finish="black">Vintage · Black</button>
+        <button type="button" class="when-m" data-set-style="vintage" data-set-finish="silver">Vintage · Silver</button>
+        <button type="button" class="when-v" data-set-finish="black">Black</button>
+        <button type="button" class="when-v" data-set-finish="silver">Silver</button>
+        <button type="button" class="when-v" data-set-style="modern">Back to Modern</button>
+      </div>
+      <small>You can switch the style at any time in the top bar ↑</small>
     </div>
 	<div class="screenshot-group v-group">
       <div class="screenshot-group-label" style="color:var(--accent);">Vintage player style — coming soon</div>
