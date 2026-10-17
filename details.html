@@ -390,6 +390,7 @@ html[data-style="vintage"] footer p{color:var(--muted);}
       <div class="pc-row"><span class="mark">🔧</span><div class="txt"><strong>LibVLC + ExoPlayer engine</strong><small>Best-in-class stream stability, protocol support and audio pipeline — with ExoPlayer handling HLS (.m3u8) streams</small></div></div>
       <div class="pc-row"><span class="mark">🎚️</span><div class="txt"><strong>Native 10-band equalizer</strong><small>Runs inside VLC pipeline, works on all stream formats</small></div></div>
       <div class="pc-row"><span class="mark">📂</span><div class="txt"><strong>Unlimited custom stations</strong><small>Add any stream URL — no catalogue lock-in</small></div></div>
+      <div class="pc-row"><span class="mark">🔍</span><div class="txt"><strong>Station search via fmstream.org</strong><small>The Radio Station Browser in the station editor searches thousands of stations worldwide on fmstream.org</small></div></div>
       <div class="pc-row"><span class="mark">🚗</span><div class="txt"><strong>Full Android Auto</strong><small>Google-reviewed, not just audio — full UI control while driving</small></div></div>
       <div class="pc-row"><span class="mark">🛠️</span><div class="txt"><strong>Aftermarket head units &amp; uncertified tablets</strong><small>Works on Android car head units and tablets without Google certification — installed from the Play Store, no sideloading. Runs in split screen next to navigation.</small></div></div>
       <div class="pc-row"><span class="mark">🪟</span><div class="txt"><strong>Windows desktop port</strong><small>Same C# codebase and LibVLC engine on Windows 11 only, with a real VU meter driven by the hardware audio level — download page and installer coming soon on GitHub</small></div></div>
@@ -405,12 +406,11 @@ html[data-style="vintage"] footer p{color:var(--muted);}
     <div class="pc-table plate">
       <div class="pc-head con"><span>⚠️</span> Limitations</div>
       <div class="pc-row"><span class="mark">🍎</span><div class="txt"><strong>No iOS version yet</strong><small>MAUI port is planned but not released — Android and Windows for now</small></div></div>
-      <div class="pc-row"><span class="mark">📖</span><div class="txt"><strong>No built-in station catalogue</strong><small>You must add stations manually or import from fmstream.org — no built-in discovery browser</small></div></div>
+      <div class="pc-row"><span class="mark">📖</span><div class="txt"><strong>No own station catalogue</strong><small>Stations are found through fmstream.org (Radio Station Browser) or added by URL — the app keeps no catalogue of its own</small></div></div>
       <div class="pc-row"><span class="mark">⌚</span><div class="txt"><strong>No Wear OS support</strong><small>Smartwatch apps on Wear OS not supported</small></div></div>
       <div class="pc-row"><span class="mark">☁️</span><div class="txt"><strong>No cloud sync</strong><small>Playlist lives on device — manual backup required if you switch phones</small></div></div>
       <div class="pc-row"><span class="mark">👥</span><div class="txt"><strong>Smaller community</strong><small>Not as well-known as TuneIn or iHeartRadio — fewer reviews, less forum support</small></div></div>
       <div class="pc-row"><span class="mark">🎙️</span><div class="txt"><strong>No podcast support</strong><small>Radio streams only — no podcast directory or RSS feed support</small></div></div>
-      <div class="pc-row"><span class="mark">🔍</span><div class="txt"><strong>No station search</strong><small>No in-app search across a station database — depends on external sources</small></div></div>
       <div class="pc-row"><span class="mark">📱</span><div class="txt"><strong>Single developer project</strong><small>Updates depend on one developer's availability</small></div></div>
     </div>
   </div>
@@ -494,8 +494,8 @@ const RA6_ROWS=[
   {cat:'📂 Stations',feature:'Playlist share',status:'pro',value:'✓ Android Share intent',note:'Share your station list via any Android app — WhatsApp, email, Drive, etc.'},
   {cat:'📂 Stations',feature:'Equalizer preset save/load',status:'pro',value:'✓ Named presets',note:'Save your EQ settings as named presets and reload them at any time.'},
   {cat:'📂 Stations',feature:'RadioTunes support',status:'pro',value:'✓ Personal key playlists',note:'Supports RadioTunes and similar subscription services — paste your personal playlist URL with your own key directly into the app.'},
-  {cat:'📂 Stations',feature:'Built-in station catalogue',status:'con',value:'✗ None',note:'No in-app discovery browser. Use fmstream.org externally.'},
-  {cat:'📂 Stations',feature:'In-app station search',status:'con',value:'✗ None',note:'No search across a station database — relies on external sources.'},
+  {cat:'📂 Stations',feature:'Own station catalogue',status:'con',value:'✗ None',note:'The app keeps no catalogue of its own — stations come from fmstream.org via the Radio Station Browser, or from any URL you add.'},
+  {cat:'📂 Stations',feature:'Station search',status:'pro',value:'✓ via fmstream.org',note:'The Radio Station Browser button in the station editor opens fmstream.org, where you search thousands of stations worldwide and pick a stream.'},
   {cat:'📂 Stations',feature:'Cloud sync',status:'con',value:'✗ None',note:'Playlist lives on device. Manual JSON export required for backup.'},
   {cat:'💰 Business',feature:'Free to use',status:'pro',value:'✓ Free forever',note:'No purchase required, no freemium tiers, no subscription.'},
   {cat:'💰 Business',feature:'Ad-free',status:'pro',value:'✓ Zero ads',note:'No banner, no interstitial, no video ads of any kind.'},
