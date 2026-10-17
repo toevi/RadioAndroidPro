@@ -35,7 +35,7 @@
     var needles = box.querySelectorAll('.needle');
     var auto = box.querySelector('.vu-auto'), range = box.querySelector('.vu-range'), read = box.querySelector('.vu-read');
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var isAuto = !reduce, level = -20, target = -7, nextAt = 0;
+    var isAuto = !reduce, level = -20, target = -7, nextAt = 0, last = 0;
 
     function setAuto(on) { isAuto = on; auto.setAttribute('aria-pressed', on ? 'true' : 'false'); }
     function show(db) { read.textContent = (db > 0 ? '+' : '') + (Math.round(db * 2) / 2) + ' dB'; }
@@ -45,13 +45,15 @@
     range.addEventListener('input', function () { setAuto(false); target = parseFloat(range.value); show(target); });
 
     function frame(now) {
+      var dt = last ? Math.min(now - last, 100) : 16; last = now;
       if (box.offsetParent !== null) {            // only while the meters are visible
-        if (isAuto && now >= nextAt) {            // music-like level: mostly -10..0 dB, short peaks
+        if (isAuto && now >= nextAt) {            // music-like level: mostly -10..0 dB, occasional peaks
           var r = Math.random();
-          target = r < 0.12 ? 0.5 + Math.random() * 2.5 : r < 0.3 ? -14 + Math.random() * 5 : -9 + Math.random() * 9;
-          nextAt = now + 180 + Math.random() * 320;
+          target = r < 0.1 ? 0.5 + Math.random() * 2 : r < 0.3 ? -13 + Math.random() * 5 : -8 + Math.random() * 8;
+          nextAt = now + 550 + Math.random() * 700;
         }
-        level += (target - level) * (isAuto ? 0.09 : 0.18);   // VU ballistics, both channels together
+        // VU ballistics, frame-rate independent; both channels move together
+        level += (target - level) * (1 - Math.exp(-dt / (isAuto ? 420 : 180)));
         var a = angle(level).toFixed(2);
         for (var i = 0; i < needles.length; i++) needles[i].setAttribute('transform', 'rotate(' + a + ' 100 112)');
         if (isAuto) { range.value = level.toFixed(1); show(level); }
