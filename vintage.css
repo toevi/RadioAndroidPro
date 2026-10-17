@@ -12,8 +12,6 @@
 .style-switch button:hover { color:var(--accent); }
 .style-switch button[aria-pressed="true"] { background:rgba(var(--accent-rgb),0.12); color:var(--accent); }
 .finish-btn { display:none; position:relative; }
-.soon-mark { font-size:7px; letter-spacing:1px; margin-left:5px; padding:1px 4px; border-radius:3px; vertical-align:2px;
-  background:#e0a43c; color:#1a1206; font-weight:700; }
 
 /* "coming soon" notice, shown only in Vintage */
 .v-soon { display:none; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; text-align:center;
