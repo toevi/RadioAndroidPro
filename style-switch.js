@@ -29,7 +29,7 @@
     var photo = box.getAttribute('data-vu') === 'photo';
     var meters = '<div class="vu-meters"><div class="vu">' + DIAL + '</div><div class="vu">' + DIAL + '</div></div>';
     if (photo) {                                   // live dials laid over the app screenshot's VU windows
-      var img = box.querySelector('img').outerHTML;
+      var img = Array.prototype.map.call(box.querySelectorAll('img'), function (i) { return i.outerHTML; }).join('');
       meters = '<div class="vu-photo">' + img +
         '<div class="vu-face l">' + PHOTO_DIAL.replace(/__ID__/g, 'vuf-l').replace('__CH__', 'L') + '</div>' +
         '<div class="vu-face r">' + PHOTO_DIAL.replace(/__ID__/g, 'vuf-r').replace('__CH__', 'R') + '</div></div>';

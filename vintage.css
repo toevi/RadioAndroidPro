@@ -1,6 +1,10 @@
 /* RadioAndroid page style — shared by index.html and details.html.
    Modern is the page's own look; Vintage (black / silver) mirrors the app's Vintage player. */
 
+/* defaults for the VU parts when the page is in Modern */
+:root { --vfd:#7fe3ff; --vfd-bg:#04080a; --led:#3dff7a; --plate-hi:rgba(255,255,255,0.08);
+  --key:linear-gradient(180deg,#3a3d42 0%,#232528 100%); --key-text:var(--accent); --key-edge:#0c0d0f; --key-hi:rgba(255,255,255,0.14); }
+
 /* ── STYLE SWITCH ── */
 .style-switch { display:flex; align-items:center; gap:6px; flex-shrink:0; }
 .style-seg { display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
@@ -185,10 +189,14 @@ html[data-style="vintage"] .style-try button[aria-pressed="true"]::before {
 .vu-showcase { max-width:340px; margin:0 auto 10px; padding:10px; }
 .vu-photo { position:relative; border-radius:14px; overflow:hidden; border:3px solid #0b0c0d; box-shadow:0 6px 18px rgba(0,0,0,0.5); }
 .vu-photo img { display:block; width:100%; }
+.vu-photo .vu-shot-silver { display:none; }
+html[data-style="vintage"][data-finish="silver"] .vu-photo .vu-shot-black { display:none; }
+html[data-style="vintage"][data-finish="silver"] .vu-photo .vu-shot-silver { display:block; }
 .vu-face { position:absolute; top:40.85%; height:8%; width:42.92%; }   /* 309x128 at x 41 / 370, y 654 of 720x1601 */
 .vu-face.l { left:5.69%; }
 .vu-face.r { left:51.39%; }
 .vu-face svg { display:block; width:100%; height:100%; }
 .vu-face::after { content:''; position:absolute; left:6px; right:6px; top:calc(100% - 1px); height:7px; background:#0c1012; }   /* hides the photo's own needle below the dial */
 .vu-showcase-cap { text-align:center; font-family:var(--mono); font-size:11px; color:var(--muted); margin:0 auto 28px; max-width:340px; }
+.vu-showcase-cap strong { color:var(--accent); }
 html[data-style="vintage"] .vu-showcase-cap { font-family:var(--sans); }
