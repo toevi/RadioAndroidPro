@@ -180,7 +180,7 @@ The VLC engine is configured specifically for live network streams, not local fi
 
 - **Reconnect loop** — up to 5 attempts with exponential backoff (1s → 2s → 4s → 8s → 15s)
 - **Watchdog timer** — detects silent VLC hangs (no audio activity for 15 seconds) and triggers recovery
-- **Cellular fallback** — if Wi-Fi loses internet (common: router loses DNS/uplink), the app binds the process to mobile data and switches back automatically when Wi-Fi recovers
+- **Cellular fallback** — if Wi-Fi loses internet (common: router loses DNS/uplink), the app binds the process to mobile data and switches back automatically when Wi-Fi recovers. Each switch between Wi-Fi and mobile data causes a short dropout; the app then resumes playback by itself, with no tap needed
 - **Hard reset** — after 3 failed recovery cycles, VLC engine is fully disposed and recreated from scratch
 - **Safe threading** — VLC callbacks that trigger reconnect logic (`EndReached`, `EncounteredError`) dispatch to the thread pool via `ThreadPool.QueueUserWorkItem`, never calling VLC methods on native threads (prevents the deadlock that kills most LibVLC integrations). State-only callbacks (`Playing`, `Paused`, `Stopped`) run directly but never call back into VLC.
 - **Serial command thread** — every control command (`Play`/`Stop`/`Pause`/`HardReset`/station switch) runs on one dedicated background thread, never the UI thread. `Stop()` blocks synchronously in `vlc_join`; on the main thread that is an ANR (see §11).

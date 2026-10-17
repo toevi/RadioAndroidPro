@@ -308,8 +308,8 @@ html[data-style="vintage"] footer p{color:var(--muted);}
     <div class="vlc-card plate">
       <div class="vc-icon">📡</div>
       <h4>Cellular Fallback</h4>
-      <p>When Wi-Fi drops, the app transparently switches to LTE/5G without interrupting playback. Handled at VLC transport layer.</p>
-      <div class="vc-tag">Wi-Fi → LTE seamless switch</div>
+      <p>When Wi-Fi loses internet, the app switches to LTE/5G and back again when Wi-Fi recovers. Each switch causes a short dropout, after which the app resumes playback on its own — no tap needed.</p>
+      <div class="vc-tag">Wi-Fi ⇄ LTE · auto-resume after a short dropout</div>
     </div>
     <div class="vlc-card plate">
       <div class="vc-icon">🔑</div>
@@ -394,7 +394,7 @@ html[data-style="vintage"] footer p{color:var(--muted);}
       <div class="pc-row"><span class="mark">🛠️</span><div class="txt"><strong>Aftermarket head units &amp; uncertified tablets</strong><small>Works on Android car head units and tablets without Google certification — installed from the Play Store, no sideloading. Runs in split screen next to navigation.</small></div></div>
       <div class="pc-row"><span class="mark">🪟</span><div class="txt"><strong>Windows desktop port</strong><small>Same C# codebase and LibVLC engine on Windows 11 only, with a real VU meter driven by the hardware audio level — download page and installer coming soon on GitHub</small></div></div>
       <div class="pc-row"><span class="mark">📺</span><div class="txt"><strong>Chromecast TV &amp; ChromeOS</strong><small>One app for phone, tablet, TV box and laptop</small></div></div>
-      <div class="pc-row"><span class="mark">📡</span><div class="txt"><strong>Wi-Fi → LTE fallback</strong><small>Seamless switch, no playback interruption</small></div></div>
+      <div class="pc-row"><span class="mark">📡</span><div class="txt"><strong>Wi-Fi → LTE fallback</strong><small>Short dropout during the switch, then playback resumes automatically</small></div></div>
       <div class="pc-row"><span class="mark">🎨</span><div class="txt"><strong>VU Meter &amp; skins</strong><small>5 visualiser modes, 8 colour palettes, custom background skins</small></div></div>
       <div class="pc-row"><span class="mark">🆓</span><div class="txt"><strong>Free — zero ads</strong><small>No ads, no subscription, no tracking</small></div></div>
       <div class="pc-row"><span class="mark">⌚</span><div class="txt"><strong>BT watch control</strong><small>Control playback from Bluetooth-enabled smartwatches via phone</small></div></div>
@@ -470,7 +470,7 @@ const RA6_ROWS=[
   {cat:'🔧 Engine & Stability',feature:'HLS (.m3u8) streams',status:'pro',value:'✓ ExoPlayer (Media3)',note:'HLS playlists are played by ExoPlayer. The app selects the engine automatically — nothing to set.'},
   {cat:'🔧 Engine & Stability',feature:'Stream stability',status:'pro',value:'2-layer + watchdog',note:'VLC internal reconnect + app-level watchdog running in parallel.'},
   {cat:'🔧 Engine & Stability',feature:'Auto-reconnect',status:'pro',value:'✓ VLC + app level',note:'Reconnects automatically at both engine and application layer.'},
-  {cat:'🔧 Engine & Stability',feature:'Cellular fallback',status:'pro',value:'✓ Wi-Fi → LTE',note:'Seamlessly switches to mobile data when Wi-Fi drops.'},
+  {cat:'🔧 Engine & Stability',feature:'Cellular fallback',status:'pro',value:'✓ Wi-Fi ⇄ LTE · auto-resume',note:'Switches to mobile data when Wi-Fi loses internet and back when Wi-Fi recovers. A short dropout during the switch, then playback resumes by itself.'},
   {cat:'🔧 Engine & Stability',feature:'Protocol support',status:'pro',value:'HTTP HLS AAC MP3 Ogg DASH ICY',note:'Full format coverage — LibVLC natively, HLS via ExoPlayer. No plugins required.'},
   {cat:'📱 Platforms',feature:'Designed for travel',status:'pro',value:'✓ Car · Bike · Bus · Train',note:'Used daily in every means of transport. Built from day one as a radio for commuters and travellers on the move.'},
   {cat:'📱 Platforms',feature:'Android phones & tablets',status:'pro',value:'✓ Android 8–16 (API 26–35)',note:'Tested across a wide range of devices and OS versions.'},
