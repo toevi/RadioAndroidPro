@@ -87,7 +87,7 @@ That is the real technical challenge — and the reason stream stability require
 | 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter driven by the hardware audio level. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **Download page and installer coming soon on GitHub.** |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
 | 🚙 Android Automotive OS | Port abandoned — technical implementation complete but incompatible with Google Play Automotive Android content policy (see section below) |
-| 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. Wear OS watches not supported. |
+| 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. A Hi-Fi amplifier with built-in Bluetooth controls the app the same way as headphones or a car, so its **remote control** plays, pauses and switches stations. Wear OS watches not supported. |
 
 ---
 
@@ -2254,7 +2254,9 @@ Double tap, not single: a resting hand or a bump in the road must not stop the m
 **In the car, the interface is not the app's at all.** Over Android Auto and Bluetooth, control
 arrives through the media session — the car's buttons, the steering wheel, voice search. Nobody
 touches the app's own screen there. The same is true of a headset: whatever buttons it has work, so a
-phone on an armband never has to come off.
+phone on an armband never has to come off. And of a Hi-Fi amplifier with built-in Bluetooth: it sends
+the same media keys as headphones or a car, so the amplifier's own remote control plays, pauses and
+switches stations from the sofa.
 
 **And that is why closing the window does not stop the radio.** Playback lives in a foreground
 service, so leaving the screen, pressing Back or switching apps only puts the interface away. Tying
