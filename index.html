@@ -5,7 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>RadioAndroid 6.0 — Simple Internet Radio App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=VT323&display=swap" rel="stylesheet"/>
+<script>
+(function () {
+  var d = document.documentElement, st = null, fi = null;
+  try { st = localStorage.getItem('ra-style'); fi = localStorage.getItem('ra-finish'); } catch (e) {}
+  var q = /[?&]style=(vintage|modern)/.exec(location.search); if (q) st = q[1];
+  var f = /[?&]finish=(black|silver)/.exec(location.search); if (f) fi = f[1];
+  d.setAttribute('data-style', st === 'vintage' ? 'vintage' : 'modern');
+  d.setAttribute('data-finish', fi === 'silver' ? 'silver' : 'black');
+})();
+</script>
 <style>
 :root {
   --bg:     #0a0a0f;
@@ -18,6 +28,14 @@
   --muted:  #666;
   --mono:   'IBM Plex Mono', monospace;
   --sans:   'IBM Plex Sans', sans-serif;
+  --accent-rgb: 232,255,71;
+  --head:   #fff;
+  --text2:  #aaa;
+  --text3:  #ccc;
+  --dim:    #555;
+  --on-accent: #000;
+  --accent-hover: #fff;
+  --nav-bg: rgba(10,10,15,0.92);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -25,33 +43,33 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
 
 /* ── HEADER ── */
 .hero {
-  border-bottom: 1px solid rgba(232,255,71,0.18);
+  border-bottom: 1px solid rgba(var(--accent-rgb),0.18);
   padding: 48px 28px 56px;
   text-align: center;
   position: relative;
   overflow-x: clip;
-  background: linear-gradient(180deg,#0d0d18 0%,#0a0a0f 100%);
+  background: linear-gradient(180deg,var(--bg2) 0%,var(--bg) 100%);
 }
 .hero > * { position:relative; z-index:2; }
 .hero::before {
   content:''; position:absolute; top:-120px; left:50%; transform:translateX(-50%);
   width:600px; height:600px; border-radius:50%;
-  background:radial-gradient(circle,rgba(232,255,71,0.07) 0%,transparent 65%);
+  background:radial-gradient(circle,rgba(var(--accent-rgb),0.07) 0%,transparent 65%);
   pointer-events:none;
 }
 .hero-icon { font-size: 64px; animation: float 3s ease-in-out infinite; display:block; margin-bottom:20px; }
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 .label-small { font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:4px; text-transform:uppercase; margin-bottom:10px; }
-.hero h1 { font-family:var(--mono); font-size:clamp(28px,6vw,52px); font-weight:700; color:#fff; letter-spacing:-1px; margin-bottom:12px; }
+.hero h1 { font-family:var(--mono); font-size:clamp(28px,6vw,52px); font-weight:700; color:var(--head); letter-spacing:-1px; margin-bottom:12px; }
 .hero h1 span { color:var(--accent); }
-.hero-sub { font-size:1.1rem; color:#aaa; margin-bottom:32px; max-width:500px; margin-left:auto; margin-right:auto; }
+.hero-sub { font-size:1.1rem; color:var(--text2); margin-bottom:32px; max-width:500px; margin-left:auto; margin-right:auto; }
 .badges { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:36px; }
 .badge {
   font-family:var(--mono); font-size:11px;
-  background:rgba(232,255,71,0.05); border:1px solid rgba(232,255,71,0.3);
+  background:rgba(var(--accent-rgb),0.05); border:1px solid rgba(var(--accent-rgb),0.3);
   border-radius:20px; padding:7px 14px; color:var(--accent); white-space:nowrap;
 }
-.badge.accent { border-color:rgba(232,255,71,0.5); color:#fff; background:rgba(232,255,71,0.1); }
+.badge.accent { border-color:rgba(var(--accent-rgb),0.5); color:var(--head); background:rgba(var(--accent-rgb),0.1); }
 .hero-cta { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
 
 /* ── BUTTONS ── */
@@ -61,11 +79,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
   padding:13px 28px; border-radius:8px; text-decoration:none;
   transition:all 0.2s; border:none; cursor:pointer;
 }
-.btn-primary { background:var(--accent); color:#000; }
-.btn-primary:hover { background:#fff; transform:translateY(-2px); box-shadow:0 8px 24px rgba(232,255,71,0.25); }
-.btn-ghost { background:transparent; color:#ccc; border:1px solid rgba(255,255,255,0.15); }
+.btn-primary { background:var(--accent); color:var(--on-accent); }
+.btn-primary:hover { background:var(--accent-hover); transform:translateY(-2px); box-shadow:0 8px 24px rgba(var(--accent-rgb),0.25); }
+.btn-ghost { background:transparent; color:var(--text3); border:1px solid rgba(255,255,255,0.15); }
 .btn-ghost:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); }
-.btn-green { background:#22c55e; color:#000; }
+.btn-green { background:#22c55e; color:var(--on-accent); }
 .btn-green:hover { background:#4ade80; transform:translateY(-2px); }
 
 /* ── SECTIONS ── */
@@ -74,7 +92,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
   font-family:var(--mono); font-size:10px; color:var(--accent);
   letter-spacing:4px; text-transform:uppercase; margin-bottom:8px;
 }
-.section-heading { font-family:var(--mono); font-size:clamp(22px,4vw,34px); font-weight:700; color:#fff; margin-bottom:40px; }
+.section-heading { font-family:var(--mono); font-size:clamp(22px,4vw,34px); font-weight:700; color:var(--head); margin-bottom:40px; }
 .section-heading span { color:var(--accent); }
 
 /* ── FEATURES GRID ── */
@@ -89,10 +107,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
   background:var(--accent); transform:scaleX(0); transform-origin:left;
   transition:transform 0.3s;
 }
-.feature-card:hover { border-color:rgba(232,255,71,0.25); transform:translateY(-3px); background:var(--bg4); }
+.feature-card:hover { border-color:rgba(var(--accent-rgb),0.25); transform:translateY(-3px); background:var(--bg4); }
 .feature-card:hover::after { transform:scaleX(1); }
 .feature-card .f-icon { font-size:32px; margin-bottom:14px; }
-.feature-card h3 { font-family:var(--mono); font-size:14px; font-weight:700; color:#fff; margin-bottom:8px; }
+.feature-card h3 { font-family:var(--mono); font-size:14px; font-weight:700; color:var(--head); margin-bottom:8px; }
 .feature-card p { font-size:13px; color:var(--muted); line-height:1.6; }
 
 /* ── SCREENSHOTS ── */
@@ -111,7 +129,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
   transition:all 0.3s;
   background:var(--bg2);
 }
-.screenshot-item img:hover { transform:scale(1.04); border-color:rgba(232,255,71,0.3); box-shadow:0 8px 32px rgba(232,255,71,0.1); }
+.screenshot-item img:hover { transform:scale(1.04); border-color:rgba(var(--accent-rgb),0.3); box-shadow:0 8px 32px rgba(var(--accent-rgb),0.1); }
 .screenshot-item p { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:8px; }
 .soon-tag { color:var(--accent); }
 
@@ -123,27 +141,27 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
   background:var(--bg3); border:1px solid var(--border);
   border-radius:16px; padding:36px 32px; position:relative; overflow:hidden;
 }
-.download-card.featured { border-color:rgba(232,255,71,0.35); }
+.download-card.featured { border-color:rgba(var(--accent-rgb),0.35); }
 .download-card.featured::before {
   content:'MAIN'; position:absolute; top:16px; right:16px;
   font-family:var(--mono); font-size:9px; letter-spacing:2px;
-  background:var(--accent); color:#000; padding:3px 10px; border-radius:4px; font-weight:700;
+  background:var(--accent); color:var(--on-accent); padding:3px 10px; border-radius:4px; font-weight:700;
 }
 .dc-icon { font-size:28px; margin-bottom:12px; }
-.dc-title { font-family:var(--mono); font-size:22px; font-weight:700; color:#fff; }
+.dc-title { font-family:var(--mono); font-size:22px; font-weight:700; color:var(--head); }
 .dc-sub { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:24px; }
 .dc-price { font-family:var(--mono); font-size:36px; font-weight:700; color:var(--accent); margin:16px 0 24px; }
 .dc-price span { font-size:13px; color:var(--muted); }
 .feature-list { list-style:none; margin-bottom:28px; }
 .feature-list li {
   padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05);
-  font-size:12px; color:#aaa; font-family:var(--mono);
+  font-size:12px; color:var(--text2); font-family:var(--mono);
   display:flex; align-items:flex-start; gap:8px;
 }
 .feature-list li:last-child { border-bottom:none; }
 .feature-list li .check { color:var(--accent); flex-shrink:0; }
-.feature-list li .dim { color:#444; }
-.feature-list li .note { color:#555; padding-left:14px; }
+.feature-list li .dim { color:var(--dim); }
+.feature-list li .note { color:var(--dim); padding-left:14px; }
 
 /* ── JSON SECTION ── */
 .code-block {
@@ -161,19 +179,19 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
   transition:background 0.2s; text-decoration:none; color:var(--text);
 }
 .link-row:hover { background:var(--bg4); }
-.link-row .lr-text { font-family:var(--mono); font-size:13px; color:#ccc; }
+.link-row .lr-text { font-family:var(--mono); font-size:13px; color:var(--text3); }
 .link-row .lr-url { font-family:var(--mono); font-size:11px; color:var(--accent); }
 .link-row .lr-arrow { color:var(--muted); font-size:18px; flex-shrink:0; }
 
 /* ── SUPPORT ── */
 .support-section {
-  background: linear-gradient(135deg,rgba(232,255,71,0.06) 0%,rgba(232,255,71,0.02) 100%);
-  border:1px solid rgba(232,255,71,0.15); border-radius:20px;
+  background: linear-gradient(135deg,rgba(var(--accent-rgb),0.06) 0%,rgba(var(--accent-rgb),0.02) 100%);
+  border:1px solid rgba(var(--accent-rgb),0.15); border-radius:20px;
   padding:56px 40px; text-align:center; margin:0 28px 72px;
   max-width:800px; margin-left:auto; margin-right:auto;
 }
-.support-section h2 { font-family:var(--mono); font-size:clamp(20px,4vw,30px); font-weight:700; color:#fff; margin-bottom:16px; }
-.support-section p { font-size:15px; color:#aaa; max-width:480px; margin:0 auto 32px; }
+.support-section h2 { font-family:var(--mono); font-size:clamp(20px,4vw,30px); font-weight:700; color:var(--head); margin-bottom:16px; }
+.support-section p { font-size:15px; color:var(--text2); max-width:480px; margin:0 auto 32px; }
 .support-section .highlight { color:var(--accent); font-weight:700; }
 
 /* ── FOOTER ── */
@@ -181,24 +199,24 @@ footer {
   background:var(--bg3); border-top:1px solid var(--border);
   padding:48px 28px; text-align:center;
 }
-.footer-logo { font-family:var(--mono); font-size:18px; font-weight:700; color:#fff; margin-bottom:6px; }
+.footer-logo { font-family:var(--mono); font-size:18px; font-weight:700; color:var(--head); margin-bottom:6px; }
 .footer-logo span { color:var(--accent); }
 .footer-sub { font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:24px; }
 .footer-links { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; }
 .footer-links a { font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; transition:color 0.2s; }
 .footer-links a:hover { color:var(--accent); }
-.footer-copy { font-family:var(--mono); font-size:10px; color:#333; }
+.footer-copy { font-family:var(--mono); font-size:10px; color:var(--dim); }
 
 /* ── NAV ── */
 nav {
   position:sticky; top:0; z-index:100;
-  background:rgba(10,10,15,0.92); backdrop-filter:blur(12px);
+  background:var(--nav-bg); backdrop-filter:blur(12px);
   border-bottom:1px solid var(--border);
   padding:12px 28px; display:flex; align-items:center; justify-content:space-between; gap:16px;
 }
-.nav-brand { font-family:var(--mono); font-size:13px; font-weight:700; color:#fff; text-decoration:none; }
+.nav-brand { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--head); text-decoration:none; }
 .nav-brand span { color:var(--accent); }
-.nav-links { display:flex; gap:20px; align-items:center; }
+.nav-links { display:flex; gap:20px; align-items:center; margin-left:auto; }
 .nav-links a { font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; transition:color 0.2s; }
 .nav-links a:hover { color:var(--accent); }
 
@@ -208,8 +226,8 @@ nav {
 .video-wrap a, .video-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
 .video-wrap img { width:100%; height:100%; object-fit:cover; display:block; opacity:0.85; transition:opacity 0.3s, transform 0.4s; }
 .video-wrap a:hover img { opacity:1; transform:scale(1.03); }
-.video-play { position:absolute; top:50%; left:50%; width:84px; height:84px; margin:-42px 0 0 -42px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 10px rgba(232,255,71,0.18); transition:transform 0.2s; }
-.video-play::after { content:""; position:absolute; top:50%; left:54%; transform:translate(-50%,-50%); border-style:solid; border-width:15px 0 15px 25px; border-color:transparent transparent transparent #0a0a0f; }
+.video-play { position:absolute; top:50%; left:50%; width:84px; height:84px; margin:-42px 0 0 -42px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 10px rgba(var(--accent-rgb),0.18); transition:transform 0.2s; }
+.video-play::after { content:""; position:absolute; top:50%; left:54%; transform:translate(-50%,-50%); border-style:solid; border-width:15px 0 15px 25px; border-color:transparent transparent transparent var(--bg); }
 .video-wrap a:hover .video-play { transform:scale(1.08); }
 .video-caption { text-align:center; font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:14px; }
 .video-caption a { color:var(--accent); text-decoration:none; }
@@ -222,6 +240,188 @@ nav {
   .support-section { margin:0 16px 52px; padding:40px 24px; }
   .nav-links { display:none; }
   .download-cards { grid-template-columns:1fr; }
+}
+
+/* ── STYLE SWITCH (Modern / Vintage) ── */
+.style-switch { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.style-seg { display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.style-switch button {
+  font-family:var(--mono); font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+  background:transparent; color:var(--muted); border:0; padding:6px 10px; cursor:pointer; transition:all 0.2s;
+}
+.style-seg button + button { border-left:1px solid var(--border); }
+.style-switch button:hover { color:var(--accent); }
+.style-switch button[aria-pressed="true"] { background:rgba(var(--accent-rgb),0.12); color:var(--accent); }
+.finish-btn { display:none; position:relative; }
+.v-only { display:none; }
+
+/* ── VINTAGE · BLACK (default finish) ── */
+html[data-style="vintage"] {
+  --bg:#17181b; --bg2:#1c1d20; --bg3:#202226; --bg4:#282a2e;
+  --accent:#d4b26a; --accent-rgb:212,178,106; --accent-hover:#ecd193;
+  --border:rgba(255,255,255,0.08);
+  --text:#d8d2c4; --muted:#8f887a; --head:#efe6cf; --text2:#bdb5a4; --text3:#d0c9b9; --dim:#6f695e;
+  --on-accent:#17181b; --nav-bg:rgba(24,25,28,0.96);
+  --sans:'Open Sans','IBM Plex Sans',sans-serif;
+  --vfd:#7fe3ff; --vfd-bg:#04080a; --led:#3dff7a;
+  --plate:repeating-linear-gradient(0deg,rgba(255,255,255,0.022) 0 1px,transparent 1px 3px),linear-gradient(180deg,#2b2d31 0%,#1f2124 100%);
+  --plate-edge:#0b0c0d; --plate-hi:rgba(255,255,255,0.08);
+  --key:linear-gradient(180deg,#4a4d52 0%,#2c2e32 100%); --key-text:var(--accent); --key-edge:#0c0d0f; --key-hi:rgba(255,255,255,0.16);
+  --screw:#8d9096; --screw-dark:#34363a;
+}
+html[data-style="vintage"] body {
+  background-color:#1a1b1e;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.018) 0 1px,transparent 1px 3px),linear-gradient(180deg,#222326 0%,#151619 100%);
+}
+html[data-style="vintage"] .v-only { display:block; }
+html[data-style="vintage"] .m-only { display:none !important; }
+html[data-style="vintage"] .finish-btn { display:inline-flex; }
+
+/* switch as hardware keys */
+html[data-style="vintage"] .style-seg { border:0; gap:4px; overflow:visible; }
+html[data-style="vintage"] .style-seg button + button { border-left:0; }
+html[data-style="vintage"] .style-switch button {
+  font-family:var(--sans); font-weight:600; color:var(--key-text);
+  background:var(--key); border:1px solid var(--key-edge); border-radius:5px;
+  box-shadow:inset 0 1px 0 var(--key-hi),0 2px 0 var(--key-edge); padding:9px 10px 6px;
+}
+html[data-style="vintage"] .style-switch button[aria-pressed="true"]::before,
+html[data-style="vintage"] .finish-btn::before {
+  content:''; position:absolute; top:3px; left:50%; width:14px; height:2px; margin-left:-7px;
+  border-radius:1px; background:var(--led); box-shadow:0 0 6px var(--led);
+}
+html[data-style="vintage"] .style-switch button { position:relative; }
+html[data-style="vintage"] .finish-btn::before { background:#e0a43c; box-shadow:0 0 6px #e0a43c; }
+
+/* nav + brand */
+html[data-style="vintage"] nav { background-image:var(--plate); border-bottom:1px solid var(--plate-edge); box-shadow:0 1px 0 var(--plate-hi) inset; }
+html[data-style="vintage"] .nav-brand { font-family:var(--sans); color:var(--accent); letter-spacing:0.5px; }
+html[data-style="vintage"] .nav-brand span { font-size:9px; letter-spacing:2px; color:var(--muted); font-weight:600; }
+html[data-style="vintage"] .nav-brand span::before { content:'MODEL '; }
+html[data-style="vintage"] .nav-links a { font-family:var(--sans); text-transform:uppercase; letter-spacing:1.5px; font-size:10px; }
+
+/* hero = front panel */
+html[data-style="vintage"] .hero { background:var(--plate); border-bottom:1px solid var(--plate-edge); box-shadow:inset 0 1px 0 var(--plate-hi); }
+html[data-style="vintage"] .hero::before { display:none; }
+html[data-style="vintage"] .label-small { font-family:var(--sans); font-weight:600; }
+html[data-style="vintage"] .hero h1,
+html[data-style="vintage"] .section-heading {
+  display:inline-block; font-family:'VT323',var(--mono); font-weight:400; letter-spacing:2px;
+  color:var(--vfd); background:var(--vfd-bg); border-radius:6px; padding:6px 18px 2px;
+  border:1px solid #000; box-shadow:inset 0 2px 8px rgba(0,0,0,0.9),0 1px 0 var(--plate-hi);
+  text-shadow:0 0 6px rgba(127,227,255,0.65),0 0 14px rgba(127,227,255,0.25);
+}
+html[data-style="vintage"] .hero h1 { font-size:clamp(40px,8vw,72px); line-height:1; }
+html[data-style="vintage"] .section-heading { font-size:clamp(26px,5vw,40px); line-height:1.15; }
+html[data-style="vintage"] .hero h1 span,
+html[data-style="vintage"] .section-heading span { color:#ffc861; text-shadow:0 0 6px rgba(255,200,97,0.6); }
+html[data-style="vintage"] .section-title { font-family:var(--sans); font-weight:600; }
+html[data-style="vintage"] .badge {
+  font-family:var(--sans); font-weight:600; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  border-radius:4px; color:var(--accent); background:var(--vfd-bg); border:1px solid #000;
+  box-shadow:inset 0 1px 4px rgba(0,0,0,0.8),0 1px 0 var(--plate-hi);
+}
+
+/* VU meters (vintage hero only) */
+.vu-pair { gap:14px; justify-content:center; margin:0 auto 30px; padding:10px; max-width:420px;
+  background:var(--vfd-bg); border:1px solid #000; border-radius:8px; box-shadow:inset 0 2px 10px rgba(0,0,0,0.9),0 1px 0 var(--plate-hi); }
+html[data-style="vintage"] .vu-pair { display:flex; }
+.vu { flex:1; max-width:190px; aspect-ratio:2/1; border-radius:4px; overflow:hidden; position:relative;
+  background:radial-gradient(ellipse at 50% 120%,#fff3cf 0%,#f2cf86 70%,#d9a957 100%); box-shadow:inset 0 0 12px rgba(120,70,0,0.45); }
+.vu svg { position:absolute; inset:0; width:100%; height:100%; }
+.vu .needle { transform-origin:100px 108px; animation:vu-swing 2.6s ease-in-out infinite; }
+.vu.r .needle { animation-duration:2.1s; animation-delay:-0.7s; }
+@keyframes vu-swing { 0%{transform:rotate(-38deg)} 18%{transform:rotate(8deg)} 30%{transform:rotate(-12deg)} 46%{transform:rotate(22deg)} 60%{transform:rotate(-4deg)} 78%{transform:rotate(30deg)} 100%{transform:rotate(-38deg)} }
+@media (prefers-reduced-motion:reduce) { .vu .needle { animation:none; transform:rotate(-6deg); } }
+
+/* buttons = hardware keys */
+html[data-style="vintage"] .btn {
+  position:relative; font-family:var(--sans); text-transform:uppercase; letter-spacing:1.5px; font-size:12px;
+  background:var(--key); color:var(--key-text); border:1px solid var(--key-edge); border-radius:6px;
+  box-shadow:inset 0 1px 0 var(--key-hi),0 3px 0 var(--key-edge),0 5px 10px rgba(0,0,0,0.45); padding:16px 26px 12px;
+}
+html[data-style="vintage"] .btn:hover { transform:none; filter:brightness(1.08); color:var(--key-text); border-color:var(--key-edge); }
+html[data-style="vintage"] .btn:active { transform:translateY(2px); box-shadow:inset 0 1px 0 var(--key-hi),0 1px 0 var(--key-edge); }
+html[data-style="vintage"] .btn-primary::before {
+  content:''; position:absolute; top:5px; left:50%; width:20px; height:3px; margin-left:-10px; border-radius:2px;
+  background:var(--led); box-shadow:0 0 8px var(--led);
+}
+
+/* panels = brushed plates with screws */
+html[data-style="vintage"] .feature-card,
+html[data-style="vintage"] .download-card,
+html[data-style="vintage"] .support-section,
+html[data-style="vintage"] .v-plate {
+  background:
+    radial-gradient(circle at 11px 11px,var(--screw) 0 2px,var(--screw-dark) 2.5px 3.5px,transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 11px,var(--screw) 0 2px,var(--screw-dark) 2.5px 3.5px,transparent 4px),
+    radial-gradient(circle at 11px calc(100% - 11px),var(--screw) 0 2px,var(--screw-dark) 2.5px 3.5px,transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) calc(100% - 11px),var(--screw) 0 2px,var(--screw-dark) 2.5px 3.5px,transparent 4px),
+    var(--plate) !important;
+  border:1px solid var(--plate-edge) !important; border-radius:8px;
+  box-shadow:inset 0 1px 0 var(--plate-hi),0 3px 10px rgba(0,0,0,0.35);
+}
+html[data-style="vintage"] .feature-card::after { background:var(--led); box-shadow:0 0 8px var(--led); height:2px; }
+html[data-style="vintage"] .feature-card:hover { transform:none; filter:brightness(1.06); }
+html[data-style="vintage"] .feature-card h3,
+html[data-style="vintage"] .dc-title,
+html[data-style="vintage"] .support-section h2 { font-family:var(--sans); color:var(--accent); text-transform:uppercase; letter-spacing:1.5px; }
+html[data-style="vintage"] .feature-card h3 { font-size:13px; }
+html[data-style="vintage"] .dc-price { font-family:'VT323',var(--mono); font-weight:400; color:var(--vfd); text-shadow:0 0 6px rgba(127,227,255,0.6); font-size:44px; }
+html[data-style="vintage"] .download-card.featured::before { background:var(--led); color:#04150a; box-shadow:0 0 8px var(--led); }
+html[data-style="vintage"] .feature-list li .check { color:var(--led); text-shadow:0 0 5px rgba(61,255,122,0.6); }
+html[data-style="vintage"] .download-section,
+html[data-style="vintage"] .screenshots-section,
+html[data-style="vintage"] footer { background:transparent; border-color:var(--plate-edge); }
+html[data-style="vintage"] .code-block { background:var(--vfd-bg); border-color:#000; color:var(--vfd); box-shadow:inset 0 2px 8px rgba(0,0,0,0.9); text-shadow:0 0 4px rgba(127,227,255,0.4); }
+html[data-style="vintage"] .links-grid { background:var(--plate-edge); border-color:var(--plate-edge); border-radius:8px; }
+html[data-style="vintage"] .link-row { background:var(--plate); }
+html[data-style="vintage"] .link-row:hover { filter:brightness(1.1); }
+html[data-style="vintage"] .link-row .lr-text { font-family:var(--sans); }
+html[data-style="vintage"] .screenshot-group-label { font-family:var(--sans); font-weight:600; font-size:10px; }
+html[data-style="vintage"] .screenshot-item img { border:3px solid #0b0c0d; border-radius:14px; box-shadow:0 0 0 1px var(--plate-hi),0 6px 18px rgba(0,0,0,0.5); }
+html[data-style="vintage"] .screenshot-item img:hover { transform:none; filter:brightness(1.05); }
+html[data-style="vintage"] .video-wrap { border:4px solid #0b0c0d; box-shadow:0 0 0 1px var(--plate-hi),0 8px 30px rgba(0,0,0,0.6); }
+html[data-style="vintage"] .video-play { background:var(--key); border:1px solid var(--key-edge); box-shadow:inset 0 1px 0 var(--key-hi),0 4px 0 var(--key-edge),0 0 0 8px rgba(0,0,0,0.3); }
+html[data-style="vintage"] .video-play::after { border-color:transparent transparent transparent var(--accent); }
+html[data-style="vintage"] .stripe { background:var(--plate-edge); box-shadow:0 1px 0 var(--plate-hi); }
+html[data-style="vintage"] .footer-logo { font-family:var(--sans); color:var(--accent); }
+html[data-style="vintage"] img[src="banner.jpg"] { filter:sepia(0.25) saturate(0.85); }
+
+/* gallery: Vintage screenshots first in Vintage mode */
+html[data-style="vintage"] .screenshots-inner { display:flex; flex-direction:column; }
+html[data-style="vintage"] .screenshots-inner > * { order:2; }
+html[data-style="vintage"] .screenshots-inner > .section-title,
+html[data-style="vintage"] .screenshots-inner > .section-heading { order:0; align-self:flex-start; }
+html[data-style="vintage"] .screenshots-inner > .v-group { order:1; }
+
+/* ── VINTAGE · SILVER ── */
+html[data-style="vintage"][data-finish="silver"] {
+  --bg:#b8bbc0; --bg2:#c3c6ca; --bg3:#cdd0d4; --bg4:#d6d8dc;
+  --accent:#23262a; --accent-rgb:35,38,42; --accent-hover:#000;
+  --border:rgba(0,0,0,0.14);
+  --text:#25282c; --muted:#4d5157; --head:#111316; --text2:#33363b; --text3:#2a2d31; --dim:#5d6167;
+  --on-accent:#f2f3f5; --nav-bg:rgba(200,202,206,0.96);
+  --plate:repeating-linear-gradient(0deg,rgba(255,255,255,0.22) 0 1px,transparent 1px 3px),linear-gradient(180deg,#e2e4e7 0%,#c4c7cc 100%);
+  --plate-edge:#8b8e94; --plate-hi:rgba(255,255,255,0.7);
+  --key:linear-gradient(180deg,#f4f5f7 0%,#c9ccd1 100%); --key-text:#26292d; --key-edge:#8a8d93; --key-hi:#fff;
+  --screw:#f4f5f7; --screw-dark:#7d8086;
+}
+html[data-style="vintage"][data-finish="silver"] body {
+  background-color:#bfc2c6;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,0.2) 0 1px,transparent 1px 3px),linear-gradient(180deg,#cfd1d5 0%,#aeb1b6 100%);
+}
+html[data-style="vintage"][data-finish="silver"] .badge { color:#d4b26a; }
+html[data-style="vintage"][data-finish="silver"] .code-block,
+html[data-style="vintage"][data-finish="silver"] .video-wrap,
+html[data-style="vintage"][data-finish="silver"] .screenshot-item img { border-color:#6d7076; }
+html[data-style="vintage"][data-finish="silver"] .download-card.featured::before { color:#04150a; }
+
+@media(max-width:768px) {
+  nav { padding:10px 16px; }
+  .style-switch button { padding:6px 8px; font-size:9px; letter-spacing:1px; }
+  html[data-style="vintage"] .style-switch button { padding:9px 7px 6px; }
+  html[data-style="vintage"] .hero h1 { padding:6px 12px 2px; }
 }
 </style>
 </head>
@@ -237,20 +437,28 @@ nav {
     <a href="#download">Download</a>
     <a href="#links">Links</a>
     <a href="https://github.com/toevi/RadioAndroidPro" target="_blank">GitHub ↗</a>
-    <a href="details.html" style="color:var(--accent);border:1px solid rgba(232,255,71,0.3);padding:4px 10px;border-radius:5px;">🔬 Technical Details</a>
+    <a href="details.html" style="color:var(--accent);border:1px solid rgba(var(--accent-rgb),0.3);padding:4px 10px;border-radius:5px;">🔬 Technical Details</a>
+  </div>
+  <div class="style-switch" role="group" aria-label="Page style">
+    <div class="style-seg">
+      <button type="button" data-set-style="modern">Modern</button>
+      <button type="button" data-set-style="vintage">Vintage</button>
+    </div>
+    <button type="button" class="finish-btn" data-toggle-finish></button>
   </div>
 </nav>
 
 <!-- BANNER -->
-<div style="width:100%;overflow:hidden;max-height:400px;position:relative;background:#0a0a0f;">
+<div style="width:100%;overflow:hidden;max-height:400px;position:relative;background:var(--bg);">
   <img src="banner.jpg" alt="RadioAndroid" style="width:100%;display:block;object-fit:cover;object-position:center 70%;max-height:400px;opacity:0.9;"/>
-  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;background:linear-gradient(0deg,#0a0a0f 0%,transparent 100%);"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;background:linear-gradient(0deg,var(--bg) 0%,transparent 100%);"></div>
 </div>
 
 <!-- HERO -->
 <header class="hero">
   <div class="label-small">Internet Radio for Android</div>
   <h1>RadioAndroid <span>6.0</span></h1>
+  <div class="vu-pair v-only" aria-hidden="true"><div class="vu l"><svg viewBox="0 0 200 100" aria-hidden="true"><path d="M30 62 A85 85 0 0 1 170 62" fill="none" stroke="#3a2a12" stroke-width="1.2"/><path d="M138 44 A85 85 0 0 1 170 62" fill="none" stroke="#c0281e" stroke-width="4"/><g stroke="#3a2a12" stroke-width="1.2"><line x1="38" y1="53" x2="34" y2="47"/><line x1="58" y1="40" x2="55" y2="33"/><line x1="80" y1="32" x2="79" y2="25"/><line x1="100" y1="30" x2="100" y2="22"/><line x1="120" y1="32" x2="121" y2="25"/><line x1="142" y1="40" x2="145" y2="33"/><line x1="162" y1="53" x2="166" y2="47"/></g><g font-family="Open Sans,sans-serif" font-size="8" fill="#3a2a12" text-anchor="middle"><text x="34" y="42">-20</text><text x="54" y="29">-10</text><text x="79" y="20">-5</text><text x="100" y="17">0</text><text x="122" y="20">+1</text><text x="147" y="29" fill="#c0281e">+2</text><text x="168" y="42" fill="#c0281e">+3</text><text x="100" y="78" font-size="13" font-weight="700">VU</text></g><g class="needle"><line x1="100" y1="108" x2="100" y2="24" stroke="#1b1b1b" stroke-width="1.6"/></g><circle cx="100" cy="108" r="12" fill="#1b1b1b"/></svg></div><div class="vu r"><svg viewBox="0 0 200 100" aria-hidden="true"><path d="M30 62 A85 85 0 0 1 170 62" fill="none" stroke="#3a2a12" stroke-width="1.2"/><path d="M138 44 A85 85 0 0 1 170 62" fill="none" stroke="#c0281e" stroke-width="4"/><g stroke="#3a2a12" stroke-width="1.2"><line x1="38" y1="53" x2="34" y2="47"/><line x1="58" y1="40" x2="55" y2="33"/><line x1="80" y1="32" x2="79" y2="25"/><line x1="100" y1="30" x2="100" y2="22"/><line x1="120" y1="32" x2="121" y2="25"/><line x1="142" y1="40" x2="145" y2="33"/><line x1="162" y1="53" x2="166" y2="47"/></g><g font-family="Open Sans,sans-serif" font-size="8" fill="#3a2a12" text-anchor="middle"><text x="34" y="42">-20</text><text x="54" y="29">-10</text><text x="79" y="20">-5</text><text x="100" y="17">0</text><text x="122" y="20">+1</text><text x="147" y="29" fill="#c0281e">+2</text><text x="168" y="42" fill="#c0281e">+3</text><text x="100" y="78" font-size="13" font-weight="700">VU</text></g><g class="needle"><line x1="100" y1="108" x2="100" y2="24" stroke="#1b1b1b" stroke-width="1.6"/></g><circle cx="100" cy="108" r="12" fill="#1b1b1b"/></svg></div></div>
   <p class="hero-sub">Simple, powerful internet radio. Built with C# / .NET MAUI, LibVLC and ExoPlayer for HLS.</p>
   <div class="badges">
     <span class="badge accent">🚗 Full Android Auto</span>
@@ -265,7 +473,7 @@ nav {
   <div class="hero-cta">
     <a href="https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid" class="btn btn-primary" target="_blank">📱 Download on Google Play</a>
     <a href="https://github.com/toevi/RadioAndroidPro" class="btn btn-ghost" target="_blank">⭐ View on GitHub</a>
-    <a href="details.html" class="btn btn-ghost" style="border-color:rgba(232,255,71,0.35);color:var(--accent);">🔬 Technical Details</a>
+    <a href="details.html" class="btn btn-ghost" style="border-color:rgba(var(--accent-rgb),0.35);color:var(--accent);">🔬 Technical Details</a>
   </div>
 </header>
 
@@ -361,21 +569,21 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 <div class="stripe"></div>
 
 <!-- JSON & PLS FORMAT -->
-<div style="background:var(--bg3);border-top:1px solid rgba(232,255,71,0.1);border-bottom:1px solid rgba(232,255,71,0.1);padding:40px 28px;">
+<div style="background:var(--bg3);border-top:1px solid rgba(var(--accent-rgb),0.1);border-bottom:1px solid rgba(var(--accent-rgb),0.1);padding:40px 28px;">
   <div style="max-width:1200px;margin:0 auto;">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:4px;text-transform:uppercase;margin-bottom:6px;">Playlist Management</div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,3vw,26px);font-weight:700;color:#fff;margin-bottom:8px;">JSON &amp; PLS Format</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(18px,3vw,26px);font-weight:700;color:var(--head);margin-bottom:8px;">JSON &amp; PLS Format</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:28px;max-width:560px;">Both formats fully supported — save, load and edit manually in any text editor. PLS is compatible with VLC and Winamp. JSON is RadioAndroid's native format and also stores your favourites.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">
 
-      <div style="background:var(--bg2);border:1px solid rgba(232,255,71,0.15);border-radius:12px;padding:22px;">
+      <div class="v-plate" style="background:var(--bg2);border:1px solid rgba(var(--accent-rgb),0.15);border-radius:12px;padding:22px;">
         <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">💾 JSON — RadioAndroid native</div>
         <div class="code-block">[{"Nazwa":"RMF FM",<br>"Sciezka":"http://rs201-krk.rmfstream.pl/rmf_fm"},<br>{"Nazwa":"BBC World",<br>"Sciezka":"http://stream.live.vc.bbcmedia.co.uk/bbc_world_service"}]</div>
         <p style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;">Stores stations + favourites · human-readable · easy to edit</p>
       </div>
 
-      <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:22px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">📋 PLS — VLC / Winamp compatible</div>
+      <div class="v-plate" style="background:var(--bg2);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:22px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">📋 PLS — VLC / Winamp compatible</div>
         <div class="code-block">[playlist]<br>NumberOfEntries=2<br>File1=http://rs201-krk.rmfstream.pl/rmf_fm<br>Title1=RMF FM<br>File2=http://stream.live.vc.bbcmedia.co.uk/bbc_world_service<br>Title2=BBC World</div>
         <p style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;">Universal format · works with VLC, Winamp and RadioAndroid</p>
       </div>
@@ -496,7 +704,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 
 	  </div>
     </div>
-	<div class="screenshot-group">
+	<div class="screenshot-group v-group">
       <div class="screenshot-group-label" style="color:var(--accent);">Vintage player style — coming soon</div>
       <div class="screenshot-grid">
 
@@ -507,7 +715,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 
 	  </div>
     </div>
-	<div class="screenshot-group">
+	<div class="screenshot-group v-group">
       <div class="screenshot-group-label" style="color:var(--accent);">Vintage on a tablet — coming soon</div>
       <div class="screenshot-grid">
 
@@ -516,7 +724,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 
 	  </div>
     </div>
-	<div class="screenshot-group">
+	<div class="screenshot-group v-group">
       <div class="screenshot-group-label" style="color:var(--accent);">Vintage — stations &amp; editor — coming soon</div>
       <div class="screenshot-grid">
 
@@ -527,7 +735,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 
 	  </div>
     </div>
-	<div class="screenshot-group">
+	<div class="screenshot-group v-group">
       <div class="screenshot-group-label" style="color:var(--accent);">Vintage — equalizer &amp; playlists — coming soon</div>
       <div class="screenshot-grid">
 
@@ -538,7 +746,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 
 	  </div>
     </div>
-	<div class="screenshot-group">
+	<div class="screenshot-group v-group">
       <div class="screenshot-group-label" style="color:var(--accent);">Vintage — Reconstructor PLS — coming soon</div>
       <div class="screenshot-grid cols-4">
         <div class="screenshot-item"><img src="screenshot73.jpg" alt="Vintage style, black - Reconstructor PLS with all 71 stations selected" loading="lazy"><p class="soon-tag">Coming soon</p></div>
@@ -548,8 +756,8 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 
     <!-- SCREENSHOTS FOOTER -->
     <div style="text-align:center;padding:40px 0 8px;">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(22px,4vw,36px);font-weight:700;color:#fff;letter-spacing:-0.5px;">RadioAndroid <span style="color:#e8ff47;">6.0</span></div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#666;letter-spacing:4px;text-transform:uppercase;margin-top:8px;">Internet Radio for Android</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:clamp(22px,4vw,36px);font-weight:700;color:var(--head);letter-spacing:-0.5px;">RadioAndroid <span style="color:var(--accent);">6.0</span></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:4px;text-transform:uppercase;margin-top:8px;">Internet Radio for Android</div>
     </div>
   </div>
 </section>
@@ -584,7 +792,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
           <li><span class="check">✓</span> 10-band Equalizer (60Hz–14kHz)</li>
           <li><span class="check">✓</span> JSON &amp; PLS Import/Export</li>
           <li><span class="check">✓</span> Playlist management</li>
-          <li><span class="dim">—</span> <span style="color:#555">Not compatible with Wear OS</span></li>
+          <li><span class="dim">—</span> <span style="color:var(--dim)">Not compatible with Wear OS</span></li>
           <li><span class="check">✓</span> HLS (.m3u8) streams played by ExoPlayer</li>
           <li><span class="check">✓</span> <span style="color:var(--accent)">Built with C# / .NET MAUI + LibVLC (LGPL) + ExoPlayer (Apache 2.0)</span></li>
         </ul>
@@ -603,7 +811,7 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
           <li><span class="check">✓</span> 10-band Equalizer</li>
           <li><span class="check">✓</span> ICY metadata &amp; cover art</li>
           <li><span class="check">✓</span> Skins &amp; sleep timer</li>
-          <li><span class="dim">—</span> <span style="color:#555">No Android Auto, Bluetooth media session or cellular fallback (phone &amp; car features)</span></li>
+          <li><span class="dim">—</span> <span style="color:var(--dim)">No Android Auto, Bluetooth media session or cellular fallback (phone &amp; car features)</span></li>
         </ul>
         <span class="btn btn-ghost" style="cursor:default;">🪟 Installer coming soon</span>
       </div>
@@ -657,18 +865,18 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
 <!-- SUPPORT -->
 <!-- TECHNICAL TEASER -->
 <div style="max-width:800px;margin:0 auto 48px;padding:0 28px;">
-  <div style="background:linear-gradient(135deg,#111118 0%,#0d0d18 100%);border:1px solid rgba(232,255,71,0.2);border-radius:20px;padding:40px 36px;position:relative;overflow:hidden;">
-    <div style="position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(232,255,71,0.07) 0%,transparent 70%);pointer-events:none;"></div>
+  <div class="v-plate" style="background:linear-gradient(135deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:20px;padding:40px 36px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-60px;right:-60px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(var(--accent-rgb),0.07) 0%,transparent 70%);pointer-events:none;"></div>
     <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">For the curious</div>
-    <h2 style="font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,22px);font-weight:700;color:#fff;margin-bottom:12px;">Why LibVLC? Why C#? What are the real <span style="color:var(--accent)">pros and cons?</span></h2>
+    <h2 style="font-family:'IBM Plex Mono',monospace;font-size:clamp(16px,3vw,22px);font-weight:700;color:var(--head);margin-bottom:12px;">Why LibVLC? Why C#? What are the real <span style="color:var(--accent)">pros and cons?</span></h2>
     <p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:24px;max-width:520px;">The technical overview covers the engine under the hood, the 10-band native equalizer, unlimited station management, an honest pros & cons table and a neutral look at competing apps. No marketing speak.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(232,255,71,0.06);border:1px solid rgba(232,255,71,0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">🔧 LibVLC engine deep-dive</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(232,255,71,0.06);border:1px solid rgba(232,255,71,0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">🎚️ 10-band native EQ</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(232,255,71,0.06);border:1px solid rgba(232,255,71,0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">⚖️ Honest pros & cons</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(232,255,71,0.06);border:1px solid rgba(232,255,71,0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">📊 Other apps overview</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(var(--accent-rgb),0.06);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">🔧 LibVLC engine deep-dive</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(var(--accent-rgb),0.06);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">🎚️ 10-band native EQ</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(var(--accent-rgb),0.06);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">⚖️ Honest pros & cons</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:rgba(var(--accent-rgb),0.06);border:1px solid rgba(var(--accent-rgb),0.2);border-radius:6px;padding:5px 12px;color:var(--accent);">📊 Other apps overview</div>
     </div>
-    <a href="details.html" style="display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;background:var(--accent);color:#000;padding:13px 28px;border-radius:8px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--accent)'">
+    <a href="details.html" style="display:inline-flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;background:var(--accent);color:var(--on-accent);padding:13px 28px;border-radius:8px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='var(--accent-hover)'" onmouseout="this.style.background='var(--accent)'">
       🔬 Read the Technical Overview →
     </a>
   </div>
@@ -699,5 +907,31 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
   <div class="footer-copy">© 2025 Tomek Masłowski · Built with ❤️ for Android Auto enthusiasts</div>
 </footer>
 
+<script>
+(function () {
+  var d = document.documentElement;
+  var finishBtn = document.querySelector('[data-toggle-finish]');
+  function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function sync() {
+    var st = d.getAttribute('data-style'), fi = d.getAttribute('data-finish');
+    document.querySelectorAll('[data-set-style]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-set-style') === st ? 'true' : 'false');
+    });
+    finishBtn.textContent = fi === 'silver' ? 'Black' : 'Silver';
+    finishBtn.setAttribute('aria-label', 'Switch to ' + (fi === 'silver' ? 'black' : 'silver') + ' finish');
+  }
+  document.querySelectorAll('[data-set-style]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var st = b.getAttribute('data-set-style');
+      d.setAttribute('data-style', st); save('ra-style', st); sync();
+    });
+  });
+  finishBtn.addEventListener('click', function () {
+    var fi = d.getAttribute('data-finish') === 'silver' ? 'black' : 'silver';
+    d.setAttribute('data-finish', fi); save('ra-finish', fi); sync();
+  });
+  sync();
+})();
+</script>
 </body>
 </html>
