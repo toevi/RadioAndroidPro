@@ -12,6 +12,20 @@
 .style-switch button:hover { color:var(--accent); }
 .style-switch button[aria-pressed="true"] { background:rgba(var(--accent-rgb),0.12); color:var(--accent); }
 .finish-btn { display:none; position:relative; }
+.soon-mark { font-size:7px; letter-spacing:1px; margin-left:5px; padding:1px 4px; border-radius:3px; vertical-align:2px;
+  background:#e0a43c; color:#1a1206; font-weight:700; }
+
+/* "coming soon" notice, shown only in Vintage */
+.v-soon { display:none; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; text-align:center;
+  margin:0 auto 26px; padding:10px 16px; max-width:640px; border-radius:6px;
+  background:var(--vfd-bg); border:1px solid #000; box-shadow:inset 0 2px 8px rgba(0,0,0,0.9),0 1px 0 var(--plate-hi);
+  font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#ffc861; }
+.v-soon b { color:var(--vfd); font-weight:600; }
+.v-soon i { font-style:normal; color:#bdb5a4; text-transform:none; letter-spacing:0.3px; font-weight:400; font-size:12px; width:100%; }
+.v-soon > span::before { content:''; display:inline-block; vertical-align:1px; margin-right:9px; width:8px; height:8px; border-radius:50%; background:#e0a43c; box-shadow:0 0 8px #e0a43c; animation:soon-blink 1.6s ease-in-out infinite; }
+@keyframes soon-blink { 50% { opacity:0.25; } }
+@media (prefers-reduced-motion:reduce) { .v-soon > span::before { animation:none; } }
+html[data-style="vintage"] .v-soon { display:flex; }
 .v-only { display:none; }
 
 /* ── VINTAGE · BLACK (default finish) ── */
