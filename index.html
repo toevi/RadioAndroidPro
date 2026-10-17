@@ -101,6 +101,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); line
 .screenshot-group { margin-bottom:40px; }
 .screenshot-group-label { font-family:var(--mono); font-size:9px; color:var(--muted); letter-spacing:3px; text-transform:uppercase; margin-bottom:16px; }
 .screenshot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+.screenshot-grid.cols-4 { grid-template-columns:repeat(4,1fr); }
+@media(max-width:768px) { .screenshot-grid.cols-4 { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); } }
 .screenshot-item { text-align:center; }
 .screenshot-item img {
   width:100%; border-radius:12px;
@@ -421,22 +423,20 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
     </div>
 
     <div class="screenshot-group">
-      <div class="screenshot-group-label" style="color:var(--accent);">Modern — side menu, sleep timer &amp; playlists</div>
+      <div class="screenshot-group-label" style="color:var(--accent);">Modern — side menu, sleep timer &amp; sharing</div>
       <div class="screenshot-grid">
         <div class="screenshot-item"><img src="screenshot13.jpg" alt="Side drawer: VU meter, app theme, cover art opacity and skins" loading="lazy"><p>Side menu · themes &amp; skins</p></div>
         <div class="screenshot-item"><img src="screenshot14.jpg" alt="Side drawer: custom skin colours mixed from RGB sliders" loading="lazy"><p>Side menu · custom colours</p></div>
         <div class="screenshot-item"><img src="screenshot15.jpg" alt="Sleep timer with preset times and a set time option" loading="lazy"><p>Sleep timer</p></div>
-        <div class="screenshot-item"><img src="screenshot18.jpg" alt="Playlists: save, load, share and the Reconstructor entry" loading="lazy"><p>Playlists · PLS</p></div>
+        <div class="screenshot-item"><img src="screenshot20.jpg" alt="Sharing an exported playlist file to another app" loading="lazy"><p>Sharing a playlist</p></div>
       </div>
     </div>
 
     <div class="screenshot-group">
-      <div class="screenshot-group-label" style="color:var(--accent);">Modern — sharing, notification, lock screen &amp; Reconstructor</div>
-      <div class="screenshot-grid">
-        <div class="screenshot-item"><img src="screenshot20.jpg" alt="Sharing an exported playlist file to another app" loading="lazy"><p>Sharing a playlist</p></div>
+      <div class="screenshot-group-label" style="color:var(--accent);">Modern — notification &amp; lock screen</div>
+      <div class="screenshot-grid cols-4">
         <div class="screenshot-item"><img src="screenshot21.jpg" alt="Quick settings with the playback notification and album art" loading="lazy"><p>Notification &amp; quick settings</p></div>
         <div class="screenshot-item"><img src="screenshot22.jpg" alt="Lock screen with playback controls and album art" loading="lazy"><p>Lock screen controls</p></div>
-        <div class="screenshot-item"><img src="screenshot28.jpg" alt="Reconstructor PLS with a loaded playlist ready to merge" loading="lazy"><p>Reconstructor · merge</p></div>
       </div>
     </div>
 
@@ -447,6 +447,16 @@ document.querySelector('#promo-video a').addEventListener('click', function (e) 
         <div class="screenshot-item"><img src="screenshot70.jpg" alt="Station tiles with Polish station logos on the green skin" loading="lazy"><p>Tiles · green skin</p></div>
         <div class="screenshot-item"><img src="screenshot71.jpg" alt="Station tiles with rock station artwork on the blue skin" loading="lazy"><p>Tiles · blue skin</p></div>
         <div class="screenshot-item"><img src="screenshot72.jpg" alt="Station tiles with RadioTunes artwork on the orange skin" loading="lazy"><p>Tiles · orange skin</p></div>
+      </div>
+    </div>
+
+    <div class="screenshot-group">
+      <div class="screenshot-group-label" style="color:var(--accent);">Playlists &amp; Reconstructor — Modern and Vintage side by side</div>
+      <div class="screenshot-grid">
+        <div class="screenshot-item"><img src="screenshot18.jpg" alt="Playlists: save, load, share and the Reconstructor entry" loading="lazy"><p>Modern · Playlists · PLS</p></div>
+        <div class="screenshot-item"><img src="screenshot28.jpg" alt="Reconstructor PLS with a loaded playlist ready to merge" loading="lazy"><p>Modern · Reconstructor</p></div>
+        <div class="screenshot-item"><img src="screenshot73.jpg" alt="Vintage style, black - Reconstructor PLS with all 71 stations selected" loading="lazy"><p class="soon-tag">Vintage · Reconstructor · coming soon</p></div>
+        <div class="screenshot-item"><img src="screenshot74.jpg" alt="Vintage style, silver - Reconstructor PLS with all 71 stations selected" loading="lazy"><p class="soon-tag">Vintage · Reconstructor · coming soon</p></div>
       </div>
     </div>
 
