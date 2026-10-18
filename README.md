@@ -84,7 +84,7 @@ That is the real technical challenge — and the reason stream stability require
 | 📱 Android phones & tablets | Android 8–16 (API 26–35) |
 | 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
-| 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter driven by the hardware audio level. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **Download page and installer coming soon on GitHub.** |
+| 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **Download page and installer coming soon on GitHub.** |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
 | 🚙 Android Automotive OS | Port abandoned — technical implementation complete but incompatible with Google Play Automotive Android content policy (see section below) |
 | 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. A Hi-Fi amplifier with built-in Bluetooth controls the app the same way as headphones or the steering-wheel buttons in a car, so its **remote control** does next / previous station and play / stop. Wear OS watches not supported. |
@@ -2622,8 +2622,8 @@ SDK is the thing that disables renaming; it waits for an SDK that ships
 `AndroidR8ObfuscationMode`, and the store deadline is February 2027.
 
 **The Windows port is done.** The same C# codebase and the same LibVLC engine run on Windows 11 —
-equalizer, metadata, cover art, skins and the sleep timer included, plus a real VU meter driven by
-the hardware audio level rather than a simulation. It targets Windows 11 only; Windows 10 is not
+equalizer, metadata, cover art, skins and the sleep timer included, plus a real VU meter that measures
+the sound the app plays rather than a simulation. It targets Windows 11 only; Windows 10 is not
 supported. A download page and the installer will be published on GitHub soon.
 
 ---
