@@ -195,6 +195,17 @@ When you press Stop or Pause, the app **stays stopped**. Network changes (switch
 
 > **Known limitation:** In certain edge cases — network handoff between Wi-Fi and mobile data, Bluetooth or Android Auto disconnection mid-stream — the reconnect loop may continue without a stop flag being set. In these cases, pressing Stop manually terminates playback. These cases were identified through daily use testing and fixed..
 
+### Swiping the app away does not stop the radio — by design
+
+Removing RadioAndroid from the recent-apps list closes the screen, not the radio. Playback runs in a foreground service, the way most music and podcast players on Android work, so the radio keeps playing in the car, with the screen locked or with the phone in a pocket.
+
+**To end playback:** press **Stop** in the app, or Stop on the head unit / in Android Auto. The notification and the lock-screen card pause it.
+
+A setting that would make a swipe stop playback was considered and rejected:
+- an accidental swipe while driving would cut the radio, in exactly the situation the app is built for;
+- off by default, it would never reach the people who expect a swipe to close the app, and anyone who finds it already knows the Stop button;
+- it would change the service's lifecycle, the area where the hardest crashes of this project once lived, for a gain that one sentence of explanation gives for free.
+
 > *This is a project, not a finished product. Bugs are fixed continuously as they surface — driven by a growing number of users, devices, and platforms. Every new device, every new Android version, every new head unit is a potential new edge case. That is the nature of a universal client running on hardware it has never seen before.*
 
 ---
