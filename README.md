@@ -2,7 +2,7 @@
 > 📄 **License:** This documentation is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — free to read, share and reuse with attribution. This repository is documentation only and contains no application source code.
 ---
 > 🌐 **[Project Website & Google Play → toevi.github.io/RadioAndroidPro](https://toevi.github.io/RadioAndroidPro/)**
-> [![Android](https://img.shields.io/badge/Androi-3DDC84?logo=android&logoColor=white&style=for-the-badge)]("https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid")
+[![Android](https://img.shields.io/badge/Android%20RELASE-3DDC84?logo=android&logoColor=white&style=for-the-badge)]("https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid")
 
 **Internet radio player for Android — app written in C# and .NET MAUI, powered by the native LibVLC engine via C# bindings.**
 
