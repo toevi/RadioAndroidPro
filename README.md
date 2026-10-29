@@ -4,6 +4,17 @@
 > 🌐 **[Project Website & Google Play → toevi.github.io/RadioAndroidPro](https://toevi.github.io/RadioAndroidPro/)**
 --- 
 
+## Get it
+
+| Platform | Where |
+|---|---|
+| **Android** (phone, tablet, Android TV, Android Auto) | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_it-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid) |
+| **Windows 11** (x64) | [![Microsoft Store — coming soon](https://img.shields.io/badge/Microsoft_Store-coming_soon-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://toevi.github.io/RadioAndroid-Windows/) |
+
+The Windows edition will be distributed only through the Microsoft Store. Its page: <https://toevi.github.io/RadioAndroid-Windows/>
+
+---
+
 
 **Internet radio player for Android — app written in C# and .NET MAUI, powered by the native LibVLC engine via C# bindings.**
 
@@ -27,7 +38,7 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 > *The real work happens in the background services: audio engine management, stream recovery, Android Auto integration, Bluetooth session handling, and state synchronization across the app. Getting all of this to work reliably in C# and .NET MAUI — a non-native layer on top of Android — was significantly harder than the equivalent in Kotlin, where the platform APIs are first-class citizens. MAUI abstracts the platform, which is convenient until you need to go deep into Android internals. Then you're fighting the framework as much as the problem. The result: a single C# codebase that runs on phones, tablets, Android TV, TV boxes, Android Desktop, Android Auto, Android Automotive OS, Bluetooth devices, and ChromeOS — tested and working on all of them.*
 
-> *Why C# and .NET MAUI? Because MAUI is a cross-platform UI framework — the same codebase can target Android, Windows, and macOS without rewriting the application layer. Kotlin and Gradle are Android-only; there is no migration path from there. With C# and MAUI that argument has now been proven: **the Windows desktop port is done** — the same C# codebase running on Windows 10/11 with the same LibVLC engine. A downloadable installer is coming soon. A macOS port follows the same logic.*
+> *Why C# and .NET MAUI? Because MAUI is a cross-platform UI framework — the same codebase can target Android, Windows, and macOS without rewriting the application layer. Kotlin and Gradle are Android-only; there is no migration path from there. With C# and MAUI that argument has now been proven: **the Windows desktop port is done** — the same C# codebase running on Windows 11 with the same LibVLC engine. It is coming to the Microsoft Store. A macOS port follows the same logic.*
 
 > *This app navigates uncharted waters. There are very few examples of .NET MAUI + C# + LibVLC on Android pushed this far — into native audio focus, background services, Android Auto, and deep platform integration. Some things did not work on the first attempt, or the second. The solutions in this README are the result of that process — not a straight line from idea to working code, but a map drawn while sailing.*
 
@@ -86,7 +97,7 @@ That is the real technical challenge — and the reason stream stability require
 | 📱 Android phones & tablets | Android 8–16 (API 26–35) |
 | 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
-| 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **Download page and installer coming soon on GitHub.** |
+| 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **Coming soon to the Microsoft Store** — [Windows page](https://toevi.github.io/RadioAndroid-Windows/). |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
 | 🚙 Android Automotive OS | Port abandoned — technical implementation complete but incompatible with Google Play Automotive Android content policy (see section below) |
 | 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. A Hi-Fi amplifier with built-in Bluetooth controls the app the same way as headphones or the steering-wheel buttons in a car, so its **remote control** does next / previous station and play / stop. Wear OS watches not supported. |
@@ -2637,7 +2648,8 @@ SDK is the thing that disables renaming; it waits for an SDK that ships
 **The Windows port is done.** The same C# codebase and the same LibVLC engine run on Windows 11 —
 equalizer, metadata, cover art, skins and the sleep timer included, plus a real VU meter that measures
 the sound the app plays rather than a simulation. It targets Windows 11 only; Windows 10 is not
-supported. A download page and the installer will be published on GitHub soon.
+supported. It is coming to the Microsoft Store; the Windows page is
+<https://toevi.github.io/RadioAndroid-Windows/>.
 
 ---
 
