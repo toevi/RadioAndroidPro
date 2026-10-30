@@ -11,7 +11,7 @@
 | **Android** (phone, tablet, Android TV, Android Auto) | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_it-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid) |
 | **Windows 11** (x64) — RadioA for Windows | [![Get it from the Microsoft Store](https://img.shields.io/badge/Microsoft_Store-get_it-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9NJPCB908XPS) |
 
-The Windows edition is called **RadioA for Windows** in the Microsoft Store, the only place to get it: <https://apps.microsoft.com/detail/9NJPCB908XPS>. Its page: <https://toevi.github.io/RadioAndroid-Windows/>
+The Windows edition is called **RadioA for Windows** in the Microsoft Store, the only place to get it. Its page: <https://toevi.github.io/RadioAndroid-Windows/>
 
 ---
 
