@@ -10,8 +10,11 @@
 |---|---|
 | **Android** (phone, tablet, Android TV, Android Auto) | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_it-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid) |
 | **Windows 11** (x64) — RadioA for Windows | [![Get it from the Microsoft Store](https://img.shields.io/badge/Microsoft_Store-get_it-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9NJPCB908XPS) |
+| **Linux** (amd64, `.deb`) — RadioA for Linux | [![Download from GitHub Releases](https://img.shields.io/badge/GitHub_Releases-download_.deb-2E9E5B?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/toevi/RadioA-Linux/releases/latest) |
 
 The Windows edition is called **RadioA for Windows** in the Microsoft Store, the only place to get it. Its page: <https://toevi.github.io/RadioAndroid-Windows/>
+
+The Linux edition is called **RadioA for Linux**, a `.deb` package from its GitHub Releases, the only place to get it. Its page: <https://toevi.github.io/RadioA-Linux/>
 
 ---
 
@@ -98,6 +101,7 @@ That is the real technical challenge — and the reason stream stability require
 | 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **In the Microsoft Store as RadioA for Windows** — [get it](https://apps.microsoft.com/detail/9NJPCB908XPS) · [Windows page](https://toevi.github.io/RadioAndroid-Windows/). |
+| 🐧 Linux (amd64, `.deb`) | **Released** — the same playback engine with its own desktop interface (Avalonia) and LibVLC from the system repositories: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Tested on Linux Mint 22.3. The Android car and phone layer does not apply on the desktop. **RadioA for Linux** — [download](https://github.com/toevi/RadioA-Linux/releases/latest) · [Linux page](https://toevi.github.io/RadioA-Linux/). |
 | 🚗 Android Auto | Tested and passed Google Play AA review |
 | 🚙 Android Automotive OS | Port abandoned — technical implementation complete but incompatible with Google Play Automotive Android content policy (see section below) |
 | 🎵 Bluetooth devices | Headphones, speakers, car head units, steering wheel controls, HiFi receivers — any BT device that uses Android media session. A Hi-Fi amplifier with built-in Bluetooth controls the app the same way as headphones or the steering-wheel buttons in a car, so its **remote control** does next / previous station and play / stop. Wear OS watches not supported. |
@@ -2650,6 +2654,11 @@ equalizer, metadata, cover art, skins and the sleep timer included, plus a real 
 the sound the app plays rather than a simulation. It targets Windows 11 only; Windows 10 is not
 supported. It is in the Microsoft Store as **RadioA for Windows**: <https://apps.microsoft.com/detail/9NJPCB908XPS>; the Windows page is
 <https://toevi.github.io/RadioAndroid-Windows/>.
+
+**There is a Linux version too.** The same playback engine runs on Linux with its own desktop interface
+(Avalonia instead of .NET MAUI), as a `.deb` package tested on Linux Mint 22.3. It is **RadioA for Linux**:
+<https://github.com/toevi/RadioA-Linux/releases/latest>; the Linux page is
+<https://toevi.github.io/RadioA-Linux/>.
 
 ---
 
