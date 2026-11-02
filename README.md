@@ -8,7 +8,7 @@
 
 | Platform | Where |
 |---|---|
-| **Android** (phone, tablet, Android TV, Android Auto) | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_it-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid) |
+| **Android** (phone, tablet, Android Auto) | [![Get it on Google Play](https://img.shields.io/badge/Google_Play-get_it-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.tmfgroup.radioandroid) |
 | **Windows 11** (x64) — RadioA for Windows | [![Get it from the Microsoft Store](https://img.shields.io/badge/Microsoft_Store-get_it-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9NJPCB908XPS) |
 | **Linux** (amd64, `.deb`) — RadioA for Linux | [![Download from GitHub Releases](https://img.shields.io/badge/GitHub_Releases-download_.deb-2E9E5B?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/toevi/RadioA-Linux/releases/latest) |
 
@@ -39,9 +39,9 @@ This README is not a feature list. It is a technical account of what went wrong 
 
 ---
 
-> *The real work happens in the background services: audio engine management, stream recovery, Android Auto integration, Bluetooth session handling, and state synchronization across the app. Getting all of this to work reliably in C# and .NET MAUI — a non-native layer on top of Android — was significantly harder than the equivalent in Kotlin, where the platform APIs are first-class citizens. MAUI abstracts the platform, which is convenient until you need to go deep into Android internals. Then you're fighting the framework as much as the problem. The result: a single C# codebase that runs on phones, tablets, Android TV, TV boxes, Android Desktop, Android Auto, Android Automotive OS, Bluetooth devices, and ChromeOS — tested and working on all of them.*
+> *The real work happens in the background services: audio engine management, stream recovery, Android Auto integration, Bluetooth session handling, and state synchronization across the app. Getting all of this to work reliably in C# and .NET MAUI — a non-native layer on top of Android — was significantly harder than the equivalent in Kotlin, where the platform APIs are first-class citizens. MAUI abstracts the platform, which is convenient until you need to go deep into Android internals. Then you're fighting the framework as much as the problem. The result: a single C# codebase that runs on phones, tablets, Android Desktop, Android Auto, Android Automotive OS, Bluetooth devices, and ChromeOS — tested and working on all of them.*
 
-> *Why C# and .NET MAUI? Because MAUI is a cross-platform UI framework — the same codebase can target Android, Windows, and macOS without rewriting the application layer. Kotlin and Gradle are Android-only; there is no migration path from there. With C# and MAUI that argument has now been proven: **the Windows desktop port is done** — the same C# codebase running on Windows 11 with the same LibVLC engine, available now in the Microsoft Store as [RadioA for Windows](https://apps.microsoft.com/detail/9NJPCB908XPS). A macOS port follows the same logic.*
+> *Why C# and .NET MAUI? Because MAUI is a cross-platform UI framework — the same codebase can target Android, Windows, and macOS without rewriting the application layer. Kotlin and Gradle are Android-only; there is no migration path from there. With C# and MAUI that argument has now been proven: **the Windows desktop port is done** — the same C# codebase running on Windows 11 with the same LibVLC engine, available now in the Microsoft Store as [RadioA for Windows](https://apps.microsoft.com/detail/9NJPCB908XPS). A macOS port follows the same logic. Linux went a different way: MAUI has no official Linux backend, so the engine stayed and the interface was rewritten in Avalonia.*
 
 > *This app navigates uncharted waters. There are very few examples of .NET MAUI + C# + LibVLC on Android pushed this far — into native audio focus, background services, Android Auto, and deep platform integration. Some things did not work on the first attempt, or the second. The solutions in this README are the result of that process — not a straight line from idea to working code, but a map drawn while sailing.*
 
@@ -55,7 +55,8 @@ This document covers the app from two angles: what it does, and what it took to 
 - VLC parameters: buffering, reconnect, engine and per-stream options
 - Reconnect logic: reconnect loop, watchdog, cellular fallback
 - Station list over 10: pagination and Android Auto handling
-- **Why LibVLC and Not ExoPlayer (sound quality, real 10-band EQ, and the metadata trade-off)**
+- **All Platforms: Android, Windows and Linux compared, MAUI vs Avalonia, and which bugs each one had**
+- **Why LibVLC and Not ExoPlayer (sound quality, real 10-band EQ, the metadata trade-off, and the HLS defect that forced a second engine)**
 - Stream Stability: The Hard Problem
 - Technical Deep Dives (VLC deadlocks, native memory, Android foreground service, Android Auto integration)
 - Station Edit, Add, Delete — Service Must Be Stopped First
@@ -79,7 +80,8 @@ This document covers the app from two angles: what it does, and what it took to 
 - **Android 8–12 Compatibility: Notifications, Storage, Directory Access**
 - Project Structure & Key Dependencies
 - **Background Skins — Architecture Guide (GraphicsView + IDrawable + SkinService)**
-- **VU Meter — Architecture Guide (PCM callback + PeriodicTimer + IDrawable modes)**
+- **VU Meter — Architecture Guide (a simulation on a timer + IDrawable modes)**
+- **What Changed After 6.6.7**
 - Development Environment
 - License & Author
 
@@ -97,8 +99,8 @@ That is the real technical challenge — and the reason stream stability require
 
 | Platform | Notes |
 |---|---|
-| 📱 Android phones & tablets | Android 8–16 (API 26–35) |
-| 📺 Android TV / TV boxes | Full support — tested on TV boxes used LAN WiFi home network Chromecast |
+| 📱 Android phones & tablets | Android 8 and newer (API 26+), `targetSdk` 36; the test matrix runs Android 8, 9, 10, 11, 12, 16 and 17 |
+| 📺 TV | Not an Android TV app: there is no TV launcher entry. A TV works as a sound output through Chromecast, the way a Bluetooth speaker does; it plays the sound and shows the logo, station, song and cover, and the phone stays the player |
 | 🖥 Android Desktop | Supported — large-screen layout scales correctly |
 | 🪟 Windows 11 only (x64) | **Port done** — same C# / .NET MAUI codebase with the LibVLC engine: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Windows 10 is not supported. The Android car and phone layer (Android Auto, Bluetooth media session, cellular fallback) does not apply on the desktop. **In the Microsoft Store as RadioA for Windows** — [get it](https://apps.microsoft.com/detail/9NJPCB908XPS) · [Windows page](https://toevi.github.io/RadioAndroid-Windows/). |
 | 🐧 Linux (amd64, `.deb`) | **Released** — the same playback engine with its own desktop interface (Avalonia) and LibVLC from the system repositories: 10-band equalizer, ICY metadata, cover art, skins, sleep timer and a real VU meter that measures the sound the app plays. Tested on Linux Mint 22.3. The Android car and phone layer does not apply on the desktop. **RadioA for Linux** — [download](https://github.com/toevi/RadioA-Linux/releases/latest) · [Linux page](https://toevi.github.io/RadioA-Linux/). |
@@ -113,6 +115,106 @@ That is the real technical challenge — and the reason stream stability require
 ---
 
 
+
+---
+
+## 🌍 All Platforms — Android, Windows, Linux
+
+One project, three apps. Windows started from the Android code in September 2026. Linux took the Windows
+playback engine unchanged and got its own interface. The sections after this one tell the Android story; this
+one shows where the platforms differ, and which bugs each of them had.
+
+### Technology
+
+| Area | Android | Windows | Linux |
+|---|---|---|---|
+| App name | RadioAndroid | RadioA for Windows | RadioA for Linux |
+| Distribution | Google Play (AAB) | Microsoft Store (MSIX) | GitHub Releases (signed `.deb`) |
+| Systems | Android 8+ | Windows 11 x64 only | amd64; tested on Linux Mint 22.3 only |
+| UI | .NET MAUI, XAML | .NET MAUI (WinUI 3), XAML shared with Android | Avalonia 12, views written from scratch |
+| Engine | LibVLC + ExoPlayer for HLS | LibVLC only | LibVLC only |
+| Where libvlc comes from | `VideoLAN.LibVLC.Android` 3.7.0-beta | `VideoLAN.LibVLC.Windows` 3.0.23.1, trimmed plugins | **the system's** `libvlc5`, version depends on the distribution |
+| Controls | MediaSession, Android Auto, Bluetooth AVRCP, notification | SMTC, notification area | MPRIS 2, system tray |
+| Running in the background | foreground service | process with its window hidden in the notification area | same, if the desktop has a tray |
+| One instance | the system | single-instance guard | a name on the D-Bus |
+| Network awareness | ConnectivityManager, mobile data fallback | MAUI Connectivity | netlink |
+| VU meter | simulation | measured, WASAPI loopback | measured, PulseAudio (`pactl` + `parec`) |
+| User files | `Download/RadioAndroid` | `Documents\RadioA` | `~/Documents/RadioA` |
+| App data | app's private folder | `%LOCALAPPDATA%` | XDG folders |
+
+PLS playlists and equalizer presets use the same file format on all three.
+
+### MAUI vs Avalonia: what had to be replaced on Linux
+
+MAUI has no official Linux backend, so the UI moved to Avalonia. The engine stayed a copy of the Windows one, so
+fixes can still be carried over as a diff.
+
+| MAUI (Android, Windows) | Avalonia (Linux) | What to watch for |
+|---|---|---|
+| `MainThread` | `Dispatcher.UIThread` | Avalonia throws on a state change from another thread; MAUI tolerated it |
+| `Microsoft.Maui.Graphics` | a small compatibility layer | VU drawing code carried over 1:1 |
+| `FileSystem.*Directory` | XDG paths | |
+| `Connectivity` | netlink | a working interface does not mean there is internet |
+| `DisplayAlertAsync` | own dialogs | |
+| Share sheet | open the PLS folder | Linux has no share sheet |
+| `DragGestureRecognizer` | own drag handling | the list takes the pointer, only after 8 px of movement |
+
+### What each app does differently
+
+| Feature | Android | Windows | Linux |
+|---|---|---|---|
+| Android Auto, Bluetooth AVRCP | ✅ | ➖ | ➖ |
+| Equalizer on/off and favourite star in Android Auto | from Android 13 | ➖ | ➖ |
+| HLS through ExoPlayer | ✅ | ➖ libvlc | ➖ libvlc |
+| Mobile data fallback | ✅ | ➖ | ➖ |
+| Real VU measurement | ❌ simulation | ✅ | ✅ needs `pulseaudio-utils` |
+| Sharing a playlist | share sheet | share sheet | open the folder |
+| Reconstructor PLS: reordering | drag | drag | up / down keys |
+| Starting with the system, tray | ➖ | ✅ | ✅ |
+| Self-signed certificate, per station | ❌ use the `http` address | ✅ | ✅ |
+
+### Bugs across the platforms
+
+✅ fixed · 🛡 guarded, cause remains · ❌ present · ➖ does not apply · ❔ not checked.
+
+**Fixed on all three**
+
+| Problem | Android | Windows | Linux |
+|---|---|---|---|
+| Station editor: "Overwrite?" about the station itself; renaming onto another left a duplicate | ✅ | ✅ | ✅ |
+| A truncated station file wiped the list | ✅ | ✅ | ✅ |
+| No network: five attempts gone in five seconds | ✅ | ✅ | ✅ |
+| Switching station with no network resumed the old one | ✅ | ✅ | ✅ |
+| A `.pls` / `.m3u` link retried forever | ✅ | ✅ | ✅ |
+| Retries ending in silence, with no message | ✅ | ✅ | ✅ |
+| Cover downloads with no size limit | ✅ | ✅ | ✅ |
+| `Stop()` on a stalled stream blocking every later command | ✅ | ✅ | ✅ |
+| Calling libvlc from its own event handler; Play→Stop→Play order | ✅ | ✅ | ✅ |
+| Reordering a filtered list lost stations | ✅ blocked | ✅ blocked | ✅ blocked |
+
+**Still open, or different per platform**
+
+| Problem | Android | Windows | Linux |
+|---|---|---|---|
+| RadioTunes logos too large for the size limit: the CDN ignores `?size=200` | ❌ same request in the code, effect not measured | ✅ | ✅ |
+| Random cover for the title `ADVERT_STOP - ADVERT_STOP` | ❌ | ❌ | ❌ |
+| Crash while switching theme (`UserAppTheme`) | 🛡 | 🛡 | ❔ |
+| HLS: libvlc `assert(duration)` kills the process | 🛡 ExoPlayer | ✅ assertion not in this build | ❔ depends on the system's libvlc |
+| Swallowed errors while saving playlists | ❌ | ✅ | ❔ |
+| Crash on return from the equalizer (Vintage LED shadow created late) | ❔ | ✅ | ✅ |
+| Short network blip restarting the stream | ✅ plays from the buffer | ❔ | ❔ |
+
+**Looks shared, but belongs to one platform**
+
+| Problem | Android | Windows | Linux | Why |
+|---|---|---|---|---|
+| SIGSEGV on every stream error | ➖ dialogs not registered | works by accident | ✅ own P/Invoke | the LibVLCSharp declaration fits the Windows ABI, not SysV |
+| Notification tone on every title change | ✅ | ➖ | ❔ | Android notification channel |
+| Whole activity leaked on Back | ✅ | ➖ | ❔ | Android window lifecycle |
+| Memory growth when opening the station list | ➖ | 🛡 ~80 KB per cycle remains | ❔ | native WinUI list |
+| A second copy running at once | ➖ | ✅ | ✅ | on Linux it took over the D-Bus name |
+| Listening history in `~/.xsession-errors` | ➖ | ❔ | ✅ | the desktop session collects stderr |
+| `DllNotFoundException` on a clean system | ➖ | ➖ | ✅ | `libvlc.so` ships only in `libvlc-dev` |
 
 ---
 
@@ -144,6 +246,41 @@ That gap had to be filled by hand, with **two cooperating subsystems**:
 This is the inverse of the ExoPlayer world: there, playback is hard-won and metadata is free; here, **the sound is world-class and the metadata is the part you have to engineer yourself.** The metadata deep-dives later in this document (`§7 AAOS Album Art`, and the AVRCP metadata section) are downstream of exactly this decision.
 
 > **The summary:** ExoPlayer would have been easier everywhere except the two things that matter most for *this* app — the quality of the sound and the fidelity of the equalizer. LibVLC wins those decisively. The cost is that platform integration and metadata both had to be built from scratch. That cost is what the rest of this README documents.
+
+### 3. The one thing that broke the trade-off: libvlc aborts the process on HLS
+
+Everything above still holds — **except for `.m3u8` streams**, where libvlc turned out to have a defect the app cannot defend against at all.
+
+**The symptom (reported from the car, only ever on HLS stations):** the app "closes itself". No dialog, no crash report, nothing in the app's own log. Android Auto and Bluetooth keep playing, but the UI is gone; reopening the app brings it back as if nothing happened.
+
+**The cause, captured on an emulator** (a test proxy reproducing a cellular packet-loss stall against a real HLS station):
+
+```
+signal 6 (SIGABRT), code -1 (SI_QUEUE)
+Abort message: '../../modules/demux/adaptive/playlist/SegmentList.cpp:133:
+   virtual void adaptive::playlist::SegmentList::updateWith(
+       AbstractMultipleSegmentBaseType *, bool): assertion "duration" failed'
+backtrace: libvlc.so   (modules/demux/adaptive — the HLS module)
+```
+
+A malformed or truncated HLS playlist update — precisely what a tower handover produces — makes libvlc's adaptive demuxer hit an `assert()` and call **`abort()`**, which kills the whole process. Android then restarts the sticky foreground service without the Activity, which is exactly why the car keeps playing while the UI disappears.
+
+**Why the app cannot fix this:**
+
+| | |
+|---|---|
+| **Catch it?** | No. `abort()` in native code is not an exception — no C# handler, no watchdog, no bounded `Stop()` can intercept it. The process simply ceases to exist. |
+| **Change libvlc version?** | No. The assertion string is compiled into **both** shipped binaries (3.6.5 and 3.7.0-beta) — VideoLAN ships libvlc with assertions **enabled**, so network data can kill the process. It is data-dependent, not version-dependent. |
+| **Move to libvlc 4?** | No. The same `assert(duration)` is still present in VLC's `master` branch. |
+| **Stay on 3.7.0-beta?** | Yes — it is the only build with **16 KB ELF page alignment**, which Google Play requires (3.6.5 is 4 KB). |
+
+### The hybrid engine
+
+**Why the app has two audio engines at all.** The *libvlc aborts the process on HLS* section above documents the defect that forced this: on HLS (`.m3u8`) streams, a malformed playlist update — exactly what a cell-tower handover produces — trips an `assert()` inside libvlc's adaptive demuxer and calls `abort()`. That is a SIGABRT: it kills the entire process. It cannot be caught from C#, it is present in every shipped libvlc build including VLC 4's `master`, and it is data-dependent rather than version-dependent. There is no workaround inside libvlc. A second engine was not a preference — it was the only remaining option.
+
+**The split.** URLs containing `.m3u8` play through **ExoPlayer (Media3)**. Everything else — the overwhelming majority of stations, all ICY/Shoutcast/Icecast streams — stays on **libvlc**, unchanged. ExoPlayer was chosen for the HLS half specifically because its HTTP layer has a **socket read timeout** (a dead socket surfaces as a load error and its own retry policy recovers, instead of the stream wedging silently with the kernel retransmitting forever) and because nothing in it can abort the process.
+
+Both engines feed the same app: the same media session, the same notification, the same Android Auto queue, the same metadata and cover-art pipeline, the same reconnect logic. The engine boundary is invisible from the outside. Only one engine ever holds the audio output at a time — leaving an HLS station parks ExoPlayer and hands the output back to libvlc, and vice versa.
 
 ---
 
@@ -1935,7 +2072,7 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 
 ## 📱 Requirements
 
-- **Android 8–16 (API 26–35)** — supported range
+- **Android 8 and newer (API 26+)**, `targetSdk` 36
 - .NET 10
 - Internet connection (Wi-Fi, 4G, 5G)
 
@@ -1945,24 +2082,25 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 
 | Package | Version | Purpose |
 |---|---|---|
-| `Microsoft.Maui.Controls` | 10.0.70 | .NET MAUI UI framework |
-| `Microsoft.Maui.Essentials` | 10.0.70 | Platform APIs (Connectivity, Preferences, etc.) |
-| `Microsoft.Maui.Graphics` | 10.0.70 | Drawing and graphics primitives |
-| `Microsoft.Maui.Resizetizer` | 10.0.70 | SVG → platform icon/splash generation |
-| `Microsoft.Extensions.Logging.Debug` | 10.0.8 | Debug logging |
-| `CommunityToolkit.Maui` | 14.2.0 | MAUI community extensions |
-| `LibVLCSharp` | 3.9.7.1 | C# bindings for LibVLC audio engine |
+| `Microsoft.Maui.Controls` | 10.0.100 | .NET MAUI UI framework |
+| `Microsoft.Maui.Essentials` | 10.0.100 | Platform APIs (Connectivity, Preferences, etc.) |
+| `Microsoft.Maui.Graphics` | 10.0.100 | Drawing and graphics primitives |
+| `Microsoft.Maui.Resizetizer` | 10.0.100 | SVG → platform icon/splash generation |
+| `Microsoft.Extensions.Logging.Debug` | 10.0.11 | Debug logging |
+| `CommunityToolkit.Maui` | 15.0.1 | MAUI community extensions |
+| `LibVLCSharp` | 3.10.1 | C# bindings for LibVLC audio engine |
 
 ### Android-only
 
 | Package | Version | Purpose |
 |---|---|---|
-| `VideoLAN.LibVLC.Android` | 3.7.0-beta | Native LibVLC library (`.so` binaries for ARM/x86). **Beta is intentional** — this is the only version that compiles correctly against the memory layout of modern Android devices (ARMv8/64-bit). The stable 3.x release produces linker errors on current hardware. Google Play accepts and distributes this build without issues. |
-| `LibVLCSharp` | 3.9.7.1 | C# bindings for LibVLC — the only VLC wrapper used in this project |
-| `LibVLCSharp.Android.AWindowModern` | 3.9.7.1 | Android surface/window integration for LibVLC |
-| `Xamarin.AndroidX.Media` | 1.8.0 | `MediaBrowserServiceCompat` — required for Android Auto |
-| `Xamarin.AndroidX.Lifecycle.*` | 2.10.0.2 | Must be explicitly pinned — see below |
-| `Xamarin.AndroidX.SavedState.SavedState.Ktx` | 1.4.0.2 | SavedState Kotlin extensions (AndroidX dependency) |
+| `VideoLAN.LibVLC.Android` | 3.7.0-beta | Native LibVLC library (`.so` binaries for ARM and x86_64). **Beta is intentional** — it is the only build with the 16 KB ELF page alignment Google Play requires; 3.6.5 is 4 KB. Google Play accepts and distributes it without issues. |
+| `LibVLCSharp` | 3.10.1 | C# bindings for LibVLC — the only VLC wrapper used in this project |
+| `LibVLCSharp.Android.AWindowModern` | 3.10.1 | Android surface/window integration for LibVLC |
+| `Xamarin.AndroidX.Media3.ExoPlayer` + `.Hls` | 1.10.1.1 | Plays HLS (`.m3u8`) streams — see the hybrid engine above |
+| `Xamarin.AndroidX.Media` | 1.8.0.1 | `MediaBrowserServiceCompat` — required for Android Auto |
+| `Xamarin.AndroidX.Lifecycle.*` | 2.11.0.1 | Must be explicitly pinned — see below |
+| `Xamarin.AndroidX.SavedState.SavedState.Ktx` | 1.5.0.1 | SavedState Kotlin extensions (AndroidX dependency) |
 
 > ⚠️ **AndroidX.Lifecycle version pinning — required for build**
 >
@@ -1971,20 +2109,20 @@ Between Visual Studio 2026 for development and Android Studio for extended emula
 > Add these to your `.csproj`:
 
 ```xml
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common.Jvm" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel.Ktx" Version="2.10.0.2" />
-<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="2.10.0.2" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Common.Jvm" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Ktx" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel.Ktx" Version="2.11.0.1" />
+<PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" Version="2.11.0.1" />
 <PackageReference Include="Xamarin.AndroidX.SavedState" Version="1.4.0.2" />
-<PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
+<PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.5.0.1" />
 ```
 
 
@@ -2096,46 +2234,19 @@ When the user navigates between pages the page instances are recreated. A single
 
 ### What it is
 
-The VU meter is a real-time audio visualiser rendered entirely in .NET MAUI using `GraphicsView` and `IDrawable`. It displays audio energy extracted from the live stream. Five independent display styles are available; the user cycles through them with a left/right swipe. Eight colour themes are available; a tap cycles through them.
+The VU meter is a real-time audio visualiser rendered entirely in .NET MAUI using `GraphicsView` and `IDrawable`. On Android it is an animation that follows the system volume, not a measurement; RadioA for Windows and Linux measure the real sound. Five independent display styles are available; the user cycles through them with a left/right swipe. Eight colour themes are available; a tap cycles through them.
 
-### Audio data source
+### Audio data source - there is none (correction, 13.10.2026)
 
-LibVLC exposes a PCM callback that delivers raw decoded audio samples before they reach the speaker. These samples arrive on a background thread at the engine's decode rate. The VU layer reads them, computes per-band energy values (arithmetic over frequency sub-ranges), and stores the result in a shared float array guarded by a lock.
-
-A timer running at roughly 30–60 Hz copies those values to a render-side buffer and calls `Invalidate()` on the active `GraphicsView`. The GraphicsView then calls `Draw(ICanvas, RectF)` on its `IDrawable` on the UI thread.
-
-```csharp
-// Skeleton — wiring only, no signal-processing details
-
-// --- PCM callback (LibVLCSharp) ---
-// Registered when playback starts. Arrives on a VLC background thread.
-void OnAudioFormat(/* params */) { /* configure PCM output format */ }
-
-void OnAudioPlay(IntPtr samples, uint count, long pts)
-{
-    // copy raw samples to a ring buffer
-    // compute energy per band — implementation intentionally omitted
-    lock (_vuLock) { /* write to _bands[] */ }
-}
-
-// --- Render timer ---
-// Created once; stopped when VU is disabled or playback stops.
-async Task RunVuTimerAsync(CancellationToken ct)
-{
-    using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(/* ~30 fps */));
-    while (await timer.WaitForNextTickAsync(ct))
-    {
-        float[] snapshot;
-        lock (_vuLock) { snapshot = (float[])_bands.Clone(); }
-
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            _activeDrawable.Bands = snapshot;
-            _activeGraphicsView.Invalidate();
-        });
-    }
-}
-```
+**This section used to describe a LibVLC PCM callback feeding per-band energy into the meter. That
+code is not in the app.** The meter is a simulation:
+`OnVuTick` (a dispatcher timer) moves three bands - bass, mid, treble, left and right - towards random
+targets with a spring (`AnimateBand`, separate up/down smoothing per band, a periodic "bass punch"),
+scaled by the system volume (`GetVolumeScale`) and frozen to a decay while the stream is not live
+(`IsPlaying && !IsReconnecting && no ConnectionStatus`). A short intro swell runs when the meter
+starts. The drawables only ever see these values. The Vintage needle meters use the same
+bands. Do not "restore" a PCM path on the strength of the old text: tapping decoded audio would mean
+an audio callback on both engines (libvlc and ExoPlayer), and the look was always the whole point.
 
 ### Display modes
 
@@ -2224,24 +2335,15 @@ Both gestures are attached directly to the containing `Grid` in XAML (`SwipeGest
 **Data flow:**
 
 ```
-PCM callback (VLC thread)
-    → compute band energies          ← stays here, off UI thread
-    → lock(_vuLock) { _snapshot = energies; }
-    → return immediately
-
-PeriodicTimer tick (background Task)
-    → lock(_vuLock) { copy _snapshot; }
-    → MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            drawable.Bands = copy;
-            graphicsView.Invalidate();
-        })
+OnVuTick (dispatcher timer, UI thread)
+    → move the bands towards random targets (AnimateBand)
+    → scale by the system volume (GetVolumeScale)
+    → decay while the stream is not live
+    → drawable.Bands = values; graphicsView.Invalidate()
 ```
 
-- All energy computation happens in the PCM callback, **before** the lock — keeping the critical section as short as possible.
-- Only the final band array crosses thread boundaries, protected by a single `lock`.
-- The UI thread only receives a pre-computed snapshot and calls `Invalidate()` — no audio math on the UI thread.
-- **Never call any MAUI UI API from the PCM callback thread** — that path leads to native SIGSEGV crashes on Android.
+- Nothing here touches the audio path or a VLC thread, so the meter cannot cost a native crash.
+- Everything runs on the UI thread, so the cost that matters is drawing, not locking.
 
 ### VU meter on/off
 
@@ -2260,7 +2362,7 @@ answers come from the same place: where this app actually runs.
 - An **aftermarket Android tablet bolted into a dashboard** — the 2-DIN head units this app's users
   buy. Not Play-certified, at arm's length, used while the car is moving.
 - **Android Auto** — the car draws the interface itself from the app's media browse tree.
-- **A TV box or Chromecast** on the home network — the picture is on the television and the only
+- **A Chromecast** on the home network — the television plays the sound and shows the station, and the only
   thing anyone holds is the phone, so the app is both the remote and the player.
 - **Bluetooth**, in two flavours. A head unit that sends media keys drives everything from its own
   buttons and the steering wheel, with the text on its display. Cheap units and speakers often pair
@@ -2587,6 +2689,11 @@ package-private members only and leaves JNI-visible names alone — merged into 
 September 2026, default in .NET 11, backported to .NET 10 servicing with `disabled` as the default,
 so it has to be set explicitly. Then smoke-test on a device before uploading.
 
+**Update, October 2026.** The switch arrived with .NET for Android SDK 36.1.118 and is set to
+`private-members`. Google spelled the requirement out as at least 25 % in **each** of optimisation,
+obfuscation and shrinking for an app with more than 10 MB of DEX, so 6.7.6 also turned R8 optimisation back
+on, after the same scripted matrix (Android 8, 9, 10, 11, 12, 16, 17) ran clean.
+
 ---
 
 ### 15. A singleton subscription leaks the whole previous activity
@@ -2638,16 +2745,41 @@ Users are responsible for ensuring they have proper access rights to all streams
 
 ---
 
-## 📌 Project Status — Closed at 6.6.7
+## 🗓 What Changed After 6.6.7
 
-**The project is finished.** Development ran for about a year, and **6.6.7 is the final version** on
-Google Play. That is a closing, not an abandonment: the app does what it set out to do, it is in
-production, and the problems in this document are solved rather than parked.
+The deep dives above were written up to 6.6.7. These came after it.
 
-**One item of work stays open**, and deliberately so: Play's DEX optimisation and obfuscation
-requirement (note 14 above). It cannot be fixed from the project today, because the .NET for Android
-SDK is the thing that disables renaming; it waits for an SDK that ships
-`AndroidR8ObfuscationMode`, and the store deadline is February 2027.
+| Date (2026) | Version | Change |
+|---|---|---|
+| 06.10 | | The reconnect loop spent its attempts on a network that did not exist: it now waits for the network first (GitHub issue #2) |
+| 08.10 | | Giving up now says so, in the app and in Android Auto, instead of going silent |
+| 12–13.10 | | **Vintage** player style: a hi-fi tower with a VFD display, needle VU meters and metal keys, in silver or black |
+| 15.10 | | `Shell.Current` threw on the way back into the app, with two windows and none activated |
+| 16.10 | | Station search field crashed natively inside Android's `SearchView`, and was replaced |
+| 21.10 | 6.7.6 | Play's DEX requirement met (field note 14) |
+| 21.10 | | DUCK and EDIT keys in Vintage; a setting decides whether navigation prompts lower the radio |
+| 22.10 | | Favourite star in Android Auto, both ways with the phone |
+| 22.10 | 6.7.10 | A copied stream address comes back to the form by itself; `.pls` / `.m3u` links are unwrapped on save |
+| 23.10 | 6.7.11 | Switching station with no network plays the new one when it returns; Stop cancels the wait; **Play on start** setting |
+| 23.10 | 6.7.14 | Equalizer on/off and favourite star on the Android Auto screen, from Android 13, only while connected to the car |
+| 23.10 | | **Rejected:** sound effects from libvlc. `stereo_widen` cannot be switched on through the public libvlc 3 API, because the equalizer overwrites the filter chain |
+| 25.10 | 6.7.20 | External audit: wake lock released on every early return, engine race fixed, station file written atomically, cover downloads limited |
+| 25.10 | | In-app Help checked against the code. It claimed Android TV support the app does not have, among other things |
+| 27.10 | 6.7.20–22 | **Mobile data fallback had never run:** `CHANGE_NETWORK_STATE` was missing, so the request threw. Fixed; short network blips now play from the buffer instead of restarting |
+| 28.10 | 6.7.22 | "Playing via mobile data" no longer stays on after Wi-Fi is gone |
+| 29.10 | 6.7.23 | Legal Notice in Help; second audit: release builds write no logs, privacy policy updated |
+| 29.10 | 6.7.23 | Notification tone on every title change, Android 14 and older (GitHub issue #3) |
+| 30.10 | 6.8.0 | Station editor: saving under its own name, renaming onto another station, leaving during the URL check; a one-time notice about RadioA for Windows |
+
+Versions reach Google Play through internal testing first, so the listing can be behind this table.
+
+---
+
+## 📌 Project Status — In Maintenance
+
+6.6.7 was meant to be the final version on Google Play. Reports from users and two external audits showed there
+was still work to do, so the project stayed open: **reported bugs get fixed**, and each change goes through
+internal testing first. Play's DEX requirement, the one item once left open here, is done (field note 14).
 
 **The Windows port is done.** The same C# codebase and the same LibVLC engine run on Windows 11 —
 equalizer, metadata, cover art, skins and the sleep timer included, plus a real VU meter that measures
