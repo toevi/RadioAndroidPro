@@ -14,7 +14,7 @@
 
 The Windows edition is called **RadioA for Windows** in the Microsoft Store, the only place to get it. Its page: <https://toevi.github.io/RadioAndroid-Windows/>
 
-The Linux edition is called **RadioA for Linux**, a `.deb` package from its GitHub Releases, the only place to get it. Its page: <https://toevi.github.io/RadioA-Linux/>
+The Linux edition is called **RadioA for Linux**, first installed as a `.deb` package from its GitHub Releases, then updated through its own APT repository. Its page: <https://toevi.github.io/RadioA-Linux/>
 
 ---
 
@@ -129,7 +129,7 @@ one shows where the platforms differ, and which bugs each of them had.
 | Area | Android | Windows | Linux |
 |---|---|---|---|
 | App name | RadioAndroid | RadioA for Windows | RadioA for Linux |
-| Distribution | Google Play (AAB) | Microsoft Store (MSIX) | GitHub Releases (signed `.deb`) |
+| Distribution | Google Play (AAB) | Microsoft Store (MSIX) | GitHub Releases (signed `.deb`), then its APT repository |
 | Systems | Android 8+ | Windows 11 x64 only | amd64; tested on Linux Mint 22.3 only |
 | UI | .NET MAUI, XAML | .NET MAUI (WinUI 3), XAML shared with Android | Avalonia 12, views written from scratch |
 | Engine | LibVLC + ExoPlayer for HLS | LibVLC only | LibVLC only |
