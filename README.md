@@ -1124,8 +1124,6 @@ Fix: every filter toggle and every favorites add/remove now sends a signal to th
 
 ### 6.3. Reconstructor PLS — CollectionView Reorder & the Switch Echo Trap
 
-> **🧪 Beta:** This feature is currently in beta testing and will be available in the near future.
-
 **What it is**
 
 Reconstructor PLS (PLS tab → Reconstructor) builds a brand-new playlist out of stations that already live inside playlists the user saved earlier. It does not create stations from scratch — it reuses streams. The user can load **several** saved `.json`/`.pls` files at once; all their streams are merged into one list, duplicates by name are dropped, the user ticks the ones to keep, drags them into any order, and exports a new `.json` + `.pls` pair. The practical value: receive playlists from other people via share, then recombine them freely. This section documents two MAUI gotchas that surfaced while building it.
@@ -1169,8 +1167,6 @@ Two supporting details: the item model implements `INotifyPropertyChanged` on `I
 ---
 
 ### 7. AAOS Album Art
-
-> **🧪 Beta:** Cover art / album art fetching is currently in beta testing and will be available in the near future.
 
 **The symptom**
 
