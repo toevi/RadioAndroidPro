@@ -2249,6 +2249,30 @@ starts. The drawables only ever see these values. The Vintage needle meters use 
 bands. Do not "restore" a PCM path on the strength of the old text: tapping decoded audio would mean
 an audio callback on both engines (libvlc and ExoPlayer), and the look was always the whole point.
 
+### Why Android simulates and the desktop versions measure
+
+The difference is not code that was never written. It is what each system asks in return for letting an app
+listen to its own sound.
+
+- **Android.** The only public way for an app to read the level of the sound it plays is the `Visualizer`
+  API, and `Visualizer` requires the **`RECORD_AUDIO`** permission — the microphone permission — even when it
+  is attached to the app's own audio session and never touches the microphone. A radio app would have to show
+  the system's "allow this app to record audio?" prompt and declare microphone access on Google Play, where it
+  is reviewed as a sensitive permission. For a meter that is decoration, that is the wrong trade: it costs the
+  listener's trust and puts the store review at risk. So the store version asks for no such permission and the
+  meter is an animation that follows the playback and the volume. Measuring inside the app instead would mean
+  an audio callback on both engines (libvlc and ExoPlayer) for the same visual result. A private build with a
+  real measurement through `Visualizer` was made and compared on a phone: on a small screen the difference is
+  hard to see; the one visible case is silence on a playing station, where the simulation keeps moving and a
+  measurement stands still.
+- **Windows.** WASAPI process loopback hands an app a copy of its own output with no permission and no prompt,
+  so RadioA for Windows measures the real sound — left and right, five bands.
+- **Linux.** PulseAudio (and PipeWire's PulseAudio layer) lets an app read the monitor of its own stream with
+  `parec`, again with no permission, so RadioA for Linux measures too.
+
+The Help screen in the Android app says the same in one line: the meter shows that a station is playing, it
+does not measure the sound.
+
 ### Display modes
 
 Each mode is a separate `IDrawable` class. The active mode owns one `GraphicsView` slot; the rest are hidden (`IsVisible = false`). Switching mode means hiding the current view and showing the next one — no layout rebuild needed.

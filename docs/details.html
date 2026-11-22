@@ -398,7 +398,7 @@ html[data-style="vintage"] footer p{color:var(--muted);}
       <div class="pc-row"><span class="mark">🐧</span><div class="txt"><strong>Linux desktop version</strong><small>The same engine with its own desktop interface and a real VU meter — a free .deb package, RadioA for Linux</small></div></div>
       <div class="pc-row"><span class="mark">📺</span><div class="txt"><strong>Chromecast TV &amp; ChromeOS</strong><small>One app for phone, tablet, TV box and laptop</small></div></div>
       <div class="pc-row"><span class="mark">📡</span><div class="txt"><strong>Wi-Fi → LTE fallback</strong><small>Short dropout during the switch, then playback resumes automatically</small></div></div>
-      <div class="pc-row"><span class="mark">🎨</span><div class="txt"><strong>VU Meter &amp; skins</strong><small>5 visualiser modes, 8 colour palettes, custom background skins</small></div></div>
+      <div class="pc-row"><span class="mark">🎨</span><div class="txt"><strong>VU Meter &amp; skins</strong><small>5 visualiser modes, 8 colour palettes, custom background skins. On Android the meter is an animation, not a measurement</small></div></div>
       <div class="pc-row"><span class="mark">🆓</span><div class="txt"><strong>Free — zero ads</strong><small>No ads, no subscription, no tracking</small></div></div>
       <div class="pc-row"><span class="mark">⌚</span><div class="txt"><strong>BT watch control</strong><small>Control playback from Bluetooth-enabled smartwatches via phone</small></div></div>
       <div class="pc-row"><span class="mark">📻</span><div class="txt"><strong>Hi-Fi amplifier remote</strong><small>A Hi-Fi amplifier with built-in Bluetooth controls the app like headphones or the steering-wheel buttons in a car — its remote control does next / previous station and play / stop</small></div></div>
@@ -488,7 +488,7 @@ const RA6_ROWS=[
   {cat:'📱 Platforms',feature:'Linux desktop',status:'pro',value:'✓ .deb package (RadioA for Linux)',note:'amd64, tested on Linux Mint 22.3. Same playback engine as the Windows app with its own desktop interface, LibVLC from the system repositories. Real VU meter that measures the sound the app plays. Android Auto, Bluetooth media session and cellular fallback do not apply on the desktop.'},
   {cat:'📱 Platforms',feature:'Wear OS',status:'con',value:'✗ Not supported',note:'Smartwatch apps on Wear OS are not supported.'},
   {cat:'🎨 UI & Audio',feature:'10-band equalizer',status:'pro',value:'✓ Native LibVLC',note:'Runs inside VLC pipeline. Works on ALL stream formats including AAC.'},
-  {cat:'🎨 UI & Audio',feature:'VU Meter',status:'pro',value:'✓ 5 modes · 8 palettes',note:'Real-time visualiser with multiple display modes and colour themes.'},
+  {cat:'🎨 UI & Audio',feature:'VU Meter',status:'pro',value:'✓ 5 modes · 8 palettes',note:'On Android an animation that follows the playback and the volume, not a measurement: reading the app\'s own sound needs the microphone permission (RECORD_AUDIO), which a radio should not ask for. The Windows and Linux versions measure the real sound, which needs no permission there.'},
   {cat:'🎨 UI & Audio',feature:'Background skins',status:'pro',value:'✓ GraphicsView',note:'Static background skins rendered via .NET MAUI GraphicsView. New in v6.0.'},
   {cat:'📂 Stations',feature:'Custom station add/edit/delete',status:'pro',value:'✓ Full CRUD',note:'Complete control — add any HTTP/HTTPS stream URL.'},
   {cat:'📂 Stations',feature:'Station database',status:'pro',value:'Unlimited',note:'No catalogue lock-in. Limited only by what streams exist on the internet.'},
