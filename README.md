@@ -333,12 +333,12 @@ The VLC engine is configured specifically for live network streams, not local fi
 **Layer 2 — App-Level Recovery (when VLC can't fix it alone)**
 
 - **Reconnect loop** — up to 5 attempts with exponential backoff (1s → 2s → 4s → 8s → 15s)
-- **Watchdog timer** — detects silent VLC hangs (no audio activity for 15 seconds) and triggers recovery
+- **Watchdog timer** — detects silent VLC hangs (no audio activity for 15 seconds, 20 on HLS) and triggers recovery
 - **Cellular fallback** — if Wi-Fi loses internet (common: router loses DNS/uplink), the app binds the process to mobile data and switches back automatically when Wi-Fi recovers. Each switch between Wi-Fi and mobile data causes a short dropout; the app then resumes playback by itself, with no tap needed
 - **Hard reset** — after 3 failed recovery cycles, VLC engine is fully disposed and recreated from scratch
 - **Safe threading** — VLC callbacks that trigger reconnect logic (`EndReached`, `EncounteredError`) dispatch to the thread pool via `ThreadPool.QueueUserWorkItem`, never calling VLC methods on native threads (prevents the deadlock that kills most LibVLC integrations). State-only callbacks (`Playing`, `Paused`, `Stopped`) run directly but never call back into VLC.
 - **Serial command thread** — every control command (`Play`/`Stop`/`Pause`/`HardReset`/station switch) runs on one dedicated background thread, never the UI thread. `Stop()` blocks synchronously in `vlc_join`; on the main thread that is an ANR (see §11).
-- **Bounded Stop / Dispose** — on a stalled HLS stream `Stop()`/`Dispose()` can block forever in a stuck network read. `StopPlayerBounded` (6 s) and `TryDisposeBounded` (3 s) abandon the wedged player, recreate fresh LibVLC/MediaPlayer instances immediately, and dispose the stuck ones 60 s later — so one wedged call never freezes the app (see §12).
+- **Bounded Stop / Dispose** — on a stalled HLS stream `Stop()`/`Dispose()` can block forever in a stuck network read. `StopPlayerBounded` (6 s) and `TryDisposeBounded` (3 s) abandon the wedged player, recreate fresh LibVLC/MediaPlayer instances immediately, and dispose the stuck ones only once their own `Stop()` has returned — never on a timer, which once freed a player still in use — so one wedged call never freezes the app (see §12).
 - **Native memory safety** — metadata polling and media references are cleaned up *before* native memory is freed, preventing use-after-free crashes
 
 If everything fails, playback stops cleanly with a status message. Press Play to try again.
@@ -347,7 +347,7 @@ If everything fails, playback stops cleanly with a status message. Press Play to
 
 When you press Stop or Pause, the app **stays stopped**. Network changes (switching Wi-Fi, entering home) will not trigger unwanted auto-play. The reconnect system is only active while the app is actually trying to play.
 
-> **Known limitation:** In certain edge cases — network handoff between Wi-Fi and mobile data, Bluetooth or Android Auto disconnection mid-stream — the reconnect loop may continue without a stop flag being set. In these cases, pressing Stop manually terminates playback. These cases were identified through daily use testing and fixed..
+> **Known limitation:** In certain edge cases — network handoff between Wi-Fi and mobile data, Bluetooth or Android Auto disconnection mid-stream — the reconnect loop may continue without a stop flag being set. In these cases, pressing Stop manually terminates playback. These cases were identified through daily use testing and fixed. Version 6.9 closes the rest: a play or stop from the car, a lost audio route and a pause while connecting now end the loop for good.
 
 ### Swiping the app away does not stop the radio — by design
 
@@ -1764,49 +1764,52 @@ Pinning the scale at the base context keeps the app's own layout stable and remo
 ### System Layers
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        UI Layer                             │
-│  - RadioPage.xaml          — main player                    │
-│  - StacjePage.xaml         — station list                   │
-│  - EditStacjaPage.xaml     — add/edit/delete station        │
-│  - EditStationPage.xaml    — 10-band EQ editor              │
-│  - ExportImportPLSPage.xaml — PLS playlists & EQ            │
-│  - CreatorPlsPage.xaml     — Reconstructor PLS (beta)       │
-│  - HelpPage.xaml + 4 context help screens                   │
-│  - User interaction: Play, Stop, Next, Prev, station select  │
-└───────────────▲──────────────────────────────────────────────┘
-                │
-                │  (user commands)
-                ▼
-┌──────────────────────────────────────────────────────────────┐
-│                App Logic / MVVM Layer                       │
-│  - RadioStateService.cs    — live playback state            │
-│  - StacjaService.cs        — station selection bridge       │
-│  - SettingsService.cs      — JSON-backed settings           │
-│  - SkinService.cs          — background skin state          │
-│  - StationLogoService.cs   — cover art fetching (beta)      │
-└───────────────▲──────────────────────────────────────────────┘
-                │
-                │  (state changes, notifications)
-                ▼
-┌──────────────────────────────────────────────────────────────┐
-│                Playback Service Layer                       │
-│  - AudioPlaybackService.cs (+ 7 partials)                   │
-│  - Responsible for:                                         │
-│    • Playback (LibVLC)                                      │
-│    • Foreground Service (Android)                           │
-│    • Android Auto, BT, notifications                        │
-│    • Watchdog, reconnect, cellular fallback                 │
-└───────────────▲──────────────────────────────────────────────┘
-                │
-                │  (playback commands)
-                ▼
-┌──────────────────────────────────────────────────────────────┐
-│                  LibVLC Engine Layer                        │
-│  - LibVLCSharp, VideoLAN.LibVLC.Android                     │
-│  - Native audio streaming, buffering, decoding              │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              UI Layer (MAUI)                            │
+│  RadioPage — main player (VU meter, skin drawer, VLC/EXO engine badge)  │
+│  StacjePage — station list  ·  EditStacjaPage — add/edit/delete         │
+│  StationSearchPage — Find Stations (Radio Browser search)               │
+│  EditStationPage — 10-band EQ  ·  ExportImportPLSPage — PLS & EQ files  │
+│  CreatorPlsPage — Reconstructor PLS  ·  Help* / License / Coffee        │
+└──────────────────────────────▲──────────────────────────────────────────┘
+                               │  user commands ↓ / state changes ↑
+┌──────────────────────────────┴──────────────────────────────────────────┐
+│                        App Logic / State Layer                          │
+│  RadioStateService — live playback state (INotifyPropertyChanged)       │
+│  StacjaService — station selection bridge                               │
+│  SettingsService — JSON persistence (stacje.json, EQ, skins, PLS)       │
+│  SkinService / ThemeService — skin, theme, player style                 │
+│  RadioBrowserService — Find Stations (Radio Browser API, mirrors)       │
+│  StationVoiceMatcher — voice / Android Auto search → station            │
+└──────────────────────────────▲──────────────────────────────────────────┘
+                               │  playback commands ↓ / metadata ↑
+┌──────────────────────────────┴──────────────────────────────────────────┐
+│                 Playback Service Layer (foreground service)             │
+│  AudioPlaybackService — 22 partial files:                               │
+│    • engine routing (.m3u8 → ExoPlayer, everything else → LibVLC)       │
+│    • serial VLC command thread · bounded Stop/Dispose                   │
+│    • watchdog (demux + audio counters) · reconnect · cellular fallback  │
+│    • MediaSessionCompat + MediaBrowserService → Bluetooth, Android Auto │
+│    • foreground notification + media controls                           │
+│    • network blips · sleep timer · waiting / give-up sounds             │
+└───────┬────────────────────────────────┬────────────────────────┬───────┘
+        │ non-HLS                        │ .m3u8 (HLS)            │ track / station
+        ▼                                ▼                        ▼ names
+┌──────────────────────┐  ┌────────────────────────────┐  ┌──────────────────────┐
+│   LibVLC Engine      │  │    ExoPlayer (Media3)      │  │  Metadata / Artwork  │
+│  LibVLCSharp +       │  │  HLS source + TS demuxer   │  │  Lookup              │
+│  VideoLAN.LibVLC.    │  │  EqAudioProcessor —        │  │  IcyMetadataProbe —  │
+│  Android (native)    │  │  libvlc's EQ ported 1:1    │  │  own ICY probe       │
+│                      │  │                            │  │  StationLogoService  │
+│  · decoding, buffer  │  │  · no assertion that can   │  │  → Deezer / iTunes   │
+│  · ICY metadata      │  │    abort() the process     │  │    (album art)       │
+│  · 10-band EQ        │  │  · socket read timeout     │  │  → radio-browser /   │
+│  · VU is simulated   │  │  · ID3 (TIT2/TPE1) meta    │  │    AudioAddict (logo)│
+└──────────────────────┘  └────────────────────────────┘  └──────────────────────┘
+                                                             (HTTP, cached on disk)
 ```
+
+**Why the third box is there.** Neither engine hands over a complete "now playing". libvlc surfaces ICY metadata but many servers never reach it through VLC; ExoPlayer's HLS path has no ICY at all, only ID3 frames muxed into the TS segments. And neither of them knows what the album cover or the station logo looks like. So the metadata/artwork lookup is a **third, app-owned subsystem** sitting next to the two engines: an ICY probe written from scratch, plus artwork resolution against Deezer/iTunes and station logos against radio-browser/AudioAddict, cached on disk. Whatever it produces is fanned out to the UI, the notification, and the media session (Android Auto + Bluetooth) at once — see "Why LibVLC and Not ExoPlayer" above.
 
 ### Stability & Protection Mechanisms
 
@@ -1814,6 +1817,7 @@ Pinning the scale at the base context keeps the app's own layout stable and remo
 |---|---|
 | **Watchdog** | Silent VLC hangs — detects no audio activity, triggers reset |
 | **Reconnect Loop** | Network loss — retries playback with exponential backoff |
+| **Hybrid Engine** | libvlc `abort()` on HLS — `.m3u8` plays through ExoPlayer, everything else through libvlc |
 | **Cellular Fallback** | Dead Wi-Fi uplink — binds to mobile data, returns when Wi-Fi recovers |
 | **Safe Threading** | Native deadlocks — VLC callbacks that trigger VLC methods dispatched to ThreadPool |
 | **Serial Command Thread** | Main-thread ANR — all blocking libvlc calls (`Stop`/`Play`/`HardReset`) run on one `VlcCommandThread`, never the UI thread; also serializes command ordering (§11) |
@@ -1827,75 +1831,76 @@ Pinning the scale at the base context keeps the app's own layout stable and remo
 
 ```
 RadioAndroid/
+├── App.xaml / App.xaml.cs        — MAUI app definition and startup
+├── AppShell.xaml / .xaml.cs      — Shell: navigation and bars
+├── MauiProgram.cs                — DI, fonts, handlers
 ├── RadioAndroid/
-│   ├── App.xaml                — MAUI app definition
-│   ├── App.xaml.cs             — App startup logic
-│   ├── MainPage.xaml           — Main shell/page
-│   ├── MainPage.xaml.cs        — Main page logic
 │   ├── Views/
-│   │   ├── RadioPage.xaml          — Main player UI
-│   │   ├── RadioPage.xaml.cs       — Main player logic
-│   │   ├── StacjePage.xaml         — Station list (list + favorites filter)
-│   │   ├── StacjePage.xaml.cs      — Station list logic (add/remove favorites, reorder, drag-drop)
-│   │   ├── EditStacjaPage.xaml     — Single station edit form (name + URL)
-│   │   ├── EditStacjaPage.xaml.cs  — Single station edit logic (Save / Delete)
+│   │   ├── RadioPage.xaml (+ .HifiExtraKeys, .PlayOnStart) — Main player, VU meter, skins drawer
+│   │   ├── StacjePage.xaml         — Station list (list / tiles, favourites filter, drag-drop reorder)
+│   │   ├── EditStacjaPage.xaml     — Single station form (name + URL, Find Stations, Find in Web)
+│   │   ├── StationSearchPage.xaml  — Find Stations: name / country / genre, listen, add
 │   │   ├── EditStationPage.xaml    — 10-band EQ editor (Save / Load / Reset preset)
-│   │   ├── EditStationPage.xaml.cs — EQ logic
-│   │   ├── ExportImportPLSPage.xaml    — PLS tab: Save / Load / Share playlists & EQ, Reconstructor entry
-│   │   ├── ExportImportPLSPage.xaml.cs — Playlist import/export/share logic
-│   │   ├── CreatorPlsPage.xaml         — Reconstructor PLS: merge saved playlists into a new one
-│   │   ├── CreatorPlsPage.xaml.cs      — Reconstructor logic (multi-load, dedup, reorder, select-all)
-│   │   ├── HelpPage.xaml           — User guide
-│   │   ├── HelpPage.xaml.cs        — User guide logic
-│   │   └── HelpReconstructorPlsPage.xaml / HelpPageAddStations / HelpPageEQ / HelpPagePLS — context help screens
+│   │   ├── ExportImportPLSPage.xaml — PLS tab: Save / Load / Share playlists & EQ
+│   │   ├── CreatorPlsPage.xaml     — Reconstructor PLS: merge saved playlists into a new one
+│   │   ├── HelpPage.xaml + HelpPageAddStations / HelpPageEQ / HelpPagePLS / HelpReconstructorPlsPage
+│   │   ├── LicensePage.xaml        — Licences and Legal Notice
+│   │   └── CoffeePage.xaml         — Support the project
 │   ├── Services/
-│   │   ├── RadioStateService.cs    — Shared playback/favorites state (INotifyPropertyChanged)
+│   │   ├── RadioStateService.cs    — Shared playback/favourites state (INotifyPropertyChanged)
 │   │   ├── StacjaService.cs        — Station selection event bridge (UI → service)
 │   │   ├── SettingsService.cs      — Persisted user settings (JSON-backed)
-│   │   └── StationLogoService.cs   — Cover art / station logo fetching (beta)
+│   │   ├── StationLogoService.cs   — Station logos and cover art
+│   │   ├── RadioBrowserService.cs  — Radio Browser API client (mirrors, retry, country cache)
+│   │   ├── IcyMetadataProbe.cs     — One-shot ICY metadata read
+│   │   └── StationVoiceMatcher.cs  — Matches a spoken / typed query to a station
 │   ├── Models/
 │   │   ├── Stacja.cs               — Station model (name + URL + IsFavorite)
-│   │   ├── StacjaViewModel.cs      — ViewModel for station list binding
-│   │   └── SkinPreset.cs           — Skin preset data model (StartHex, EndHex, DotsArgbHex, optional VU block)
+│   │   └── StacjaViewModel.cs      — ViewModel for station list binding
 │   └── Helpers/
-│       ├── SkinService.cs          — Singleton: owns active skin state, applies LinearGradientBrush to page background
-│       ├── ToastHelper.cs          — Native Android toast wrapper
-│       ├── PlaybackHelper.cs       — Playback utility methods (AA queue refresh, etc.)
-│       ├── BgDotsDrawable.cs       — IDrawable: dot-pattern layer rendered over gradient background
-│       ├── VuHorizontalDrawable.cs — IDrawable: 5 horizontal band bars
-│       ├── VuVerticalDrawable.cs   — IDrawable: N vertical column bars
-│       ├── VuOscilloscopeDrawable.cs — IDrawable: waveform oscilloscope
-│       ├── VuLedDrawable.cs        — IDrawable: LED bar graph (dot-matrix)
-│       └── VuBannerDrawable.cs     — IDrawable: LED banner (full-width bar)
+│       ├── SkinService.cs / ThemeService.cs — Skin state, app theme, player style
+│       ├── NowPlayingText.cs       — Cleans the "now playing" text before it is shown
+│       ├── PlaylistUnwrap.cs       — .pls / .m3u address → first stream
+│       ├── AtomicFile.cs           — Whole-file writes for stacje.json / settings.json
+│       ├── ShellAccess.cs          — Shell.Current without its throw
+│       ├── HifiKeys.cs, BrushedMetalDrawable.cs, VfdGlassDrawable.cs, VuNeedleDrawable.cs — Vintage style
+│       ├── VuMeter*Drawable.cs, VuThemes.cs — VU meter modes and palettes
+│       ├── BgDotsDrawable.cs       — Dot-pattern layer over the gradient background
+│       └── Glyphs, ToolbarGlyphs, Responsive, ToastHelper, PlaybackHelper, tile helpers
 ├── Platforms/Android/
-│   ├── MainActivity.cs                   — App entry point, permission requests, folder setup
-│   ├── MainApplication.cs                — Application subclass (MAUI bootstrap)
-│   ├── AudioPlaybackService.cs           — Main service (partial class)
-│   ├── AudioPlaybackService.Playback.cs  — Play/Stop/Pause/HardReset, equalizer
-│   ├── AudioPlaybackService.Media.cs     — VLC events, notifications, metadata
-│   ├── AudioPlaybackService.Reconnect.cs — Reconnect loop, connectivity, cellular
-│   ├── AudioPlaybackService.Queue.cs     — Next/Prev/queue management
-│   ├── AudioPlaybackService.Callbacks.cs — MediaSession + AudioFocus
-│   ├── AudioPlaybackService.Cellular.cs  — Cellular fallback, WiFi recovery monitor
-│   ├── AudioPlaybackService.Watchdog.cs  — Watchdog timer, VLC activity tracking
-│   ├── AudioPlaybackService.CommandQueue.cs — Serial VLC command thread (RunOnVlcThread)
-│   └── AndroidManifest.xml               — Android app manifest (permissions, features)
-└── RadioAndroid.csproj                   — .NET MAUI project file (dependencies, config)
+│   ├── MainActivity.cs / MainApplication.cs — Entry point, permissions, folder setup
+│   ├── AudioPlaybackService.cs     — Main service (partial class, + 21 partials below)
+│   ├── EqAudioProcessor.cs         — The libvlc equalizer ported to ExoPlayer
+│   ├── EqPresetStore.cs            — User EQ presets from Download/RadioAndroid/EQ
+│   ├── SleepTimeDialog.cs, ClockFormat.cs — Sleep timer picker, 12/24 h clock
+│   ├── SystemVolume.cs             — Volume slider on the system media volume
+│   ├── AppLog.cs                   — Logging, compiled out of Release
+│   └── AndroidManifest.xml         — Permissions, features
+└── RadioAndroid.csproj             — .NET MAUI project file (dependencies, config)
 ```
 
-The `AudioPlaybackService` is a `partial class` split across 9 files by responsibility. This keeps each file focused and manageable while sharing state through the service instance.
+The `AudioPlaybackService` is a `partial class` split across 22 files by responsibility. This keeps each file focused and manageable while sharing state through the service instance.
 
 | File | Responsibility |
 |---|---|
 | `AudioPlaybackService.cs` | Service lifecycle, `OnCreate`, `OnStartCommand`, `OnDestroy`, `OnLoadChildren` |
 | `AudioPlaybackService.Playback.cs` | `PlayRadio`, `StopRadio`, `PauseRadio`, `HardResetVlc`, equalizer, bounded Stop/Dispose (§12) |
+| `AudioPlaybackService.Exo.cs` | ExoPlayer for HLS (`.m3u8`) — the second engine |
 | `AudioPlaybackService.Reconnect.cs` | Reconnect loop, exponential backoff, connectivity events |
-| `AudioPlaybackService.Media.cs` | VLC event handlers, metadata polling, notifications, session-art scaling (§13) |
-| `AudioPlaybackService.Queue.cs` | Station queue, Next/Previous, `PlayFromQueueIndex` |
-| `AudioPlaybackService.Callbacks.cs` | `AudioFocusChangeListener`, `RadioMediaSessionCallback` |
+| `AudioPlaybackService.NetworkBlip.cs` | Short network blips: play on from the buffer, restart only when the stream has really stopped |
 | `AudioPlaybackService.Cellular.cs` | Cellular fallback, WiFi recovery monitor, HTTP probe |
 | `AudioPlaybackService.Watchdog.cs` | Watchdog timer, VLC activity tracking (`Buffering` excluded — §12) |
 | `AudioPlaybackService.CommandQueue.cs` | Serial VLC command thread — `RunOnVlcThread`, keeps blocking libvlc calls off the main thread (§11) |
+| `AudioPlaybackService.Media.cs` | VLC event handlers, metadata polling, notifications, session-art scaling (§13) |
+| `AudioPlaybackService.StreamInfo.cs` | Format, bitrate and sample rate for the stream badge |
+| `AudioPlaybackService.Queue.cs` | Station queue, Next/Previous, `PlayFromQueueIndex` |
+| `AudioPlaybackService.Callbacks.cs` | `AudioFocusChangeListener`, `RadioMediaSessionCallback` |
+| `AudioPlaybackService.VoiceSearch.cs` | Voice and Android Auto search → station |
+| `AudioPlaybackService.CarOnly.cs` | Actions shown only while Android Auto is connected |
+| `AudioPlaybackService.EqToggle.cs` / `.Favorites.cs` | Equalizer on/off and the favourite star on the Android Auto screen |
+| `AudioPlaybackService.EqPresets.cs` | "Presets EQU" tab in the Android Auto browse tree |
+| `AudioPlaybackService.SleepTimer.cs` | Sleep timer — lives in the service, not in the page |
+| `AudioPlaybackService.WaitingCue.cs` / `.GaveUpBeep.cs` | "Still searching" sound and the give-up signal |
 
 Splitting the service was not just an organizational choice — it was a response to a real problem. A single large service class with all responsibilities mixed together made it extremely difficult to track object lifetimes and spot memory leaks. Background services on Android are long-lived; they run for hours. Any object that is not properly disposed, any event subscription that is not unsubscribed, any reference that is held longer than necessary will accumulate. In a long-running audio service this shows up as gradual memory growth, eventually causing the system to kill the process.
 
@@ -2769,13 +2774,37 @@ The deep dives above were written up to 6.6.7. These came after it.
 
 Versions reach Google Play through internal testing first, so the listing can be behind this table.
 
+### 6.8 – 6.9: a station search, and a second pass over reconnecting
+
+**What was added.** Until 6.8 the only way to find a station was to leave the app for fmstream.org and copy a
+stream address back. The station editor now has **Find Stations**: a search inside the app, on the free
+Radio Browser API, by name, country and genre, with a test listen before a station is added. The fmstream.org
+button stays, renamed **Find in Web**. The hard part was not the list but the network: public mirrors of the
+directory go down without notice, so the search moves to another mirror when one fails and repeats a query
+by itself when the connection comes back. Some stations also send a whole data record where the title
+should be; that text is now tidied into "Artist - Title" before it reaches the screen and the car.
+
+**What the problem was.** Reconnecting worked for a stream that simply dropped, but not for everything that
+can happen around it. An external audit of the engine found cases where two things disagreed about whether
+the radio should be playing: a pause or a phone call in the middle of a reconnect, a lost network while a
+station was still connecting, a play command from the car while a reconnect loop was already running. In
+the car one of them showed up for real: the head unit lost the app ("no media source") while the radio
+went on playing, with no key working until the app was closed.
+
+**How it was fixed.** Each case was first reproduced in the automated state tester or on the Desktop Head
+Unit, then fixed one at a time, and every fix went through the private build and the tester before it
+reached the store version. A command from the car now makes the playback service its own, so it no
+longer depends on the car's connection to stay alive. Keeping the car's media session alive by force was
+considered and rejected: the session belongs to the service, and the right fix was that the service must
+not end while it plays.
+
 ---
 
-## 📌 Project Status — In Maintenance
+## 📌 Project Status — Active
 
-6.6.7 was meant to be the final version on Google Play. Reports from users and two external audits showed there
-was still work to do, so the project stayed open: **reported bugs get fixed**, and each change goes through
-internal testing first. Play's DEX requirement, the one item once left open here, is done (field note 14).
+The project is in active development. **6.8.5** (Find Stations) is on its way to production on Google Play;
+**6.9.1**, with the improved reconnect and resume, is in internal testing and follows it. Each change goes through
+internal testing first.
 
 **The Windows port is done.** The same C# codebase and the same LibVLC engine run on Windows 11 —
 equalizer, metadata, cover art, skins and the sleep timer included, plus a real VU meter that measures
