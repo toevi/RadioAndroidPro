@@ -2826,8 +2826,8 @@ not end while it plays.
 
 ## 📌 Project Status — Active
 
-The project is in active development. **6.8.5** (Find Stations) is on its way to production on Google Play;
-**6.9.1**, with the improved reconnect and resume, is in internal testing and follows it. Each change goes through
+The project is in active development. **6.8.5** (Find Stations) is in production on Google Play;
+**6.9**, with the improved reconnect and resume, is in internal testing and follows it. Each change goes through
 internal testing first.
 
 **The Windows port is done.** The same C# codebase and the same LibVLC engine run on Windows 11 —
